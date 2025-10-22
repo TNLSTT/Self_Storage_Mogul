@@ -1,8 +1,9 @@
 import type { Draft } from 'immer'
 import { ACTION_LOOKUP } from '../data/actions'
-import type { ActionDefinition, GameActionId, GameState } from '../types/game'
+import type { ActionDefinition, GameActionId, GameState, PricingTier } from '../types/game'
 import { clamp, pushLog } from './helpers'
 import { nextRandom } from '../utils/random'
+import { computeFacilityAverageRent, normalizePricingTier } from '../utils/facility'
 
 const MANAGER_PROFILES = [
   {
@@ -52,7 +53,24 @@ export const applyActionEffects = (
       break
     }
     case 'optimize_pricing': {
-      state.facility.averageRent += 8
+      const adjustTier = (tier: PricingTier, standardDelta: number, primeDelta: number) =>
+        normalizePricingTier(
+          {
+            ...tier,
+            standard: tier.standard + standardDelta,
+            prime: tier.prime + primeDelta,
+          },
+          tier
+        )
+
+      state.facility.pricing.climateControlled = adjustTier(
+        state.facility.pricing.climateControlled,
+        7,
+        10
+      )
+      state.facility.pricing.driveUp = adjustTier(state.facility.pricing.driveUp, 5, 7)
+      state.facility.pricing.vault = adjustTier(state.facility.pricing.vault, 6, 9)
+      state.facility.averageRent = computeFacilityAverageRent(state.facility)
       state.market.referenceRent += 2
       state.marketing.momentum = clamp(state.marketing.momentum - 0.05, 0, 2)
       state.marketing.brandStrength = clamp(state.marketing.brandStrength + 0.05, 0, 1)

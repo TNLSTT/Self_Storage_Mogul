@@ -3,6 +3,12 @@ import { ACTION_LOOKUP } from '../data/actions'
 import type { GameState, GoalMetric, GoalState } from '../types/game'
 import { clamp, pushLog, tickCooldowns } from './helpers'
 import { nextRandom } from '../utils/random'
+import {
+  computeFacilityAverageRent,
+  evictionUrgencyFactor,
+  paymentPlanCollectionRate,
+  specialsDiscountFactor,
+} from '../utils/facility'
 
 export const TICK_INTERVAL_MS = 1000
 const DAYS_PER_TICK = 1
@@ -112,17 +118,44 @@ export const advanceTick = (state: Draft<GameState>) => {
     0,
     1
   )
+  state.facility.averageRent = computeFacilityAverageRent(state.facility)
+
+  const specialAdoption =
+    state.facility.pricing.specials.offer === 'one_month_free'
+      ? clamp(state.facility.pricing.specials.adoptionRate, 0, 1)
+      : 0
+  const specialsBoost = specialAdoption * 0.05
+  const specialDiscount = specialsDiscountFactor(state.facility.pricing)
+
+  const delinquencyPolicy = state.facility.delinquency
+  const delinquencyRate = clamp(delinquencyPolicy.rate, 0, 0.3)
+  const evictionUrgency = evictionUrgencyFactor(delinquencyPolicy)
+  const collectionRate = paymentPlanCollectionRate(delinquencyPolicy)
+  const delinquencyDrag =
+    delinquencyRate * (delinquencyPolicy.allowPaymentPlans ? 0.05 : 0.12) + evictionUrgency * 0.05
 
   const demandNoise = nextRandom(state) * 0.06 - 0.03
   const macroWave = nextRandom(state) * 0.03 - 0.015
-  const marketingLift = state.marketing.level * 0.025 + state.marketing.momentum * 0.2 + state.marketing.brandStrength * 0.12
+  const marketingLift =
+    state.marketing.level * 0.025 + state.marketing.momentum * 0.2 + state.marketing.brandStrength * 0.12
   const automationLift = state.automation.level * 0.04
   const reputationLift = (state.facility.reputation - 60) / 140
-  const pricePressure = Math.max(0, (state.facility.averageRent - state.market.referenceRent) / state.market.referenceRent)
+  const pricePressure = Math.max(
+    0,
+    (state.facility.averageRent - state.market.referenceRent) / state.market.referenceRent
+  )
   const competitionDrag = state.market.competitionPressure * 0.05
 
   state.market.demandIndex = clamp(
-    state.market.demandIndex + demandNoise + macroWave + marketingLift + automationLift + reputationLift - pricePressure * 0.5 - competitionDrag,
+    state.market.demandIndex +
+      demandNoise +
+      macroWave +
+      marketingLift +
+      automationLift +
+      reputationLift +
+      specialsBoost * 0.4 -
+      pricePressure * 0.5 -
+      competitionDrag,
     0.2,
     1.4
   )
@@ -139,7 +172,14 @@ export const advanceTick = (state: Draft<GameState>) => {
   state.market.climateRisk = clamp(state.market.climateRisk + nextRandom(state) * 0.015 - 0.007, 0, 1)
 
   const targetOccupancyRatio = clamp(
-    state.market.demandIndex + marketingLift * 0.5 + automationLift * 0.35 + reputationLift * 0.6 - pricePressure * 0.7 - state.market.climateRisk * 0.03,
+    state.market.demandIndex +
+      marketingLift * 0.5 +
+      automationLift * 0.35 +
+      reputationLift * 0.6 +
+      specialsBoost * 0.6 -
+      pricePressure * 0.7 -
+      state.market.climateRisk * 0.03 -
+      delinquencyRate * 0.25,
     0.25,
     0.99 + state.automation.level * 0.04
   )
@@ -150,20 +190,52 @@ export const advanceTick = (state: Draft<GameState>) => {
     0,
     state.facility.totalUnits
   )
-  state.facility.occupancyRate = state.facility.occupiedUnits / state.facility.totalUnits
+  state.facility.occupancyRate = state.facility.totalUnits
+    ? state.facility.occupiedUnits / state.facility.totalUnits
+    : 0
+
+  const delinquentUnitsRaw = state.facility.occupiedUnits * delinquencyRate
+  const evictionMitigation = delinquencyPolicy.allowPaymentPlans ? 0.5 : 1
+  const evictedUnits = delinquentUnitsRaw * evictionUrgency * evictionMitigation
+  if (evictedUnits > 0) {
+    state.facility.occupiedUnits = clamp(
+      state.facility.occupiedUnits - evictedUnits,
+      0,
+      state.facility.totalUnits
+    )
+    state.facility.occupancyRate = state.facility.totalUnits
+      ? state.facility.occupiedUnits / state.facility.totalUnits
+      : 0
+  }
+  const remainingDelinquentUnits = Math.min(
+    state.facility.occupiedUnits,
+    Math.max(0, delinquentUnitsRaw - evictedUnits)
+  )
+  const payingUnits = Math.max(0, state.facility.occupiedUnits - remainingDelinquentUnits)
 
   const satisfaction = clamp(
-    state.facility.occupancyRate * 0.65 + state.marketing.brandStrength * 0.2 + state.automation.reliability * 0.1 - pricePressure * 0.4,
+    state.facility.occupancyRate * 0.65 +
+      state.marketing.brandStrength * 0.2 +
+      state.automation.reliability * 0.1 +
+      specialsBoost * 0.4 +
+      (delinquencyPolicy.allowPaymentPlans ? 0.03 : 0) -
+      pricePressure * 0.4 -
+      delinquencyDrag,
     -1,
     1
   )
   state.facility.reputation = clamp(state.facility.reputation + satisfaction * 1.3, 35, 98)
-  state.automation.reliability = clamp(state.automation.reliability - 0.005 + state.automation.level * 0.01, 0.6, 0.99)
+  state.automation.reliability = clamp(
+    state.automation.reliability - 0.005 + state.automation.level * 0.01,
+    0.6,
+    0.99
+  )
   state.facility.automationLevel = state.automation.level
 
   const managerRevenueBonus = state.automation.aiManager?.bonuses.revenue ?? 0
   const dailyRent = state.facility.averageRent / 30
-  const revenue = state.facility.occupiedUnits * dailyRent * (1 + managerRevenueBonus)
+  const effectiveRevenueUnits = (payingUnits + remainingDelinquentUnits * collectionRate) * (1 + managerRevenueBonus)
+  const revenue = effectiveRevenueUnits * dailyRent * (1 - specialDiscount)
   const operations = (420 + state.facility.totalUnits * 2.6) * (1 - state.automation.level * 0.18)
   const marketingSpend = 240 * state.marketing.level + state.marketing.momentum * 160
   const automationSpend = 160 * (1 + state.automation.level * 2)
