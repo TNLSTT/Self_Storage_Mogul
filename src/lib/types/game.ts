@@ -22,10 +22,15 @@ export interface ClockState {
   speed: number
 }
 
+export interface FacilityMixCategory {
+  units: number
+  dimensions: string[]
+}
+
 export interface FacilityMix {
-  climateControlled: number
-  driveUp: number
-  vault: number
+  climateControlled: FacilityMixCategory
+  driveUp: FacilityMixCategory
+  vault: FacilityMixCategory
 }
 
 export interface PricingTier {
