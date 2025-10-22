@@ -9,20 +9,38 @@ The entire simulation runs client-side in the browser—no backend dependencies,
 ---
 
 ## 📚 Table of Contents
-1. [Feature Highlights](#-feature-highlights)
-2. [Gameplay Overview](#-gameplay-overview)
-3. [Simulation Systems](#-simulation-systems)
-4. [Content & Progression](#-content--progression)
-5. [Tech Stack](#-tech-stack)
-6. [Project Structure](#-project-structure)
-7. [Getting Started](#-getting-started)
-8. [Available Scripts](#-available-scripts)
-9. [Saving & Data](#-saving--data)
-10. [Testing & Quality](#-testing--quality)
-11. [Deployment](#-deployment)
-12. [Roadmap](#-roadmap)
-13. [Contributing](#-contributing)
-14. [License & Inspiration](#-license--inspiration)
+1. [Prototype Snapshot](#-prototype-snapshot)
+2. [Feature Highlights](#-feature-highlights)
+3. [Gameplay Overview](#-gameplay-overview)
+4. [Simulation Systems](#-simulation-systems)
+5. [Content & Progression](#-content--progression)
+6. [Tech Stack](#-tech-stack)
+7. [Project Structure](#-project-structure)
+8. [Getting Started](#-getting-started)
+9. [Available Scripts](#-available-scripts)
+10. [Saving & Data](#-saving--data)
+11. [Testing & Quality](#-testing--quality)
+12. [Deployment](#-deployment)
+13. [Roadmap](#-roadmap)
+14. [Contributing](#-contributing)
+15. [License & Inspiration](#-license--inspiration)
+
+---
+
+## 🚦 Prototype Snapshot
+
+The current build focuses on the **Harbor One command console**, a single-facility slice that exercises the core systems:
+
+- **Live market loop** powered by Svelte stores, Immer, and a deterministic RNG. Every "day" the simulation adjusts demand,
+  occupancy, pricing pressure, and climate risk before updating your financials.
+- **Action-driven gameplay** via the Command Deck. Trigger capital projects, marketing pushes, pricing recalibrations, and AI
+  manager training—all wired into the simulation pipeline with cooldowns and cash gating.
+- **AI dispatch feed & dashboards** that surface the latest events, KPIs, and goal progress so you can react without digging
+  through spreadsheets.
+- **Goal progression ladder** that graduates from stabilization to automation and valuation growth, unlocking new actions along
+  the way.
+
+Everything runs client-side with Vite + Svelte + Tailwind. No backend services are required.
 
 ---
 
@@ -99,7 +117,7 @@ Each Infinity Project resets parts of your progress while granting permanent met
 | **Styling** | [TailwindCSS](https://tailwindcss.com) + custom design tokens | Consistent theming and rapid iteration |
 | **State** | [Svelte Stores](https://svelte.dev/docs/svelte-store) + [Immer](https://immerjs.github.io/immer/) | Immutable game state mutations |
 | **Game Loop** | `requestAnimationFrame` + fall back `setInterval` | Deterministic tick system |
-| **Persistence** | Browser `localStorage` with cloud sync hooks | Automatic save/load |
+| **Persistence** | Browser `localStorage` hooks *(planned)* | Automatic save/load |
 | **Tooling** | TypeScript, ESLint, Prettier, Vitest | Reliability and DX |
 | **Hosting** | Vercel, Netlify, or GitHub Pages | Zero-backend deployment |
 
@@ -109,76 +127,56 @@ Each Infinity Project resets parts of your progress while granting permanent met
 ```
 self-storage-mogul/
 ├── src/
-│   ├── App.svelte                # Root application shell
-│   ├── main.ts                   # Entry point bootstrapping the game
-│   ├── game/
-│   │   ├── gameState.ts          # Centralized store for money, units, upgrades
-│   │   ├── tickLoop.ts           # Main game loop controller
-│   │   ├── simulation/
-│   │   │   ├── marketModel.ts    # Demand & competitor dynamics
-│   │   │   ├── financeModel.ts   # Loans, interest, risk simulations
-│   │   │   └── eventSystem.ts    # Random & scripted events
-│   │   ├── systems/
-│   │   │   ├── automation.ts     # AI managers & automation tree
-│   │   │   ├── facilities.ts     # Build/upgrade logic
-│   │   │   └── prestige.ts       # Infinity Project mechanics
-│   │   └── persistence/
-│   │       ├── saveManager.ts    # Local save/load logic
-│   │       └── cloudSync.ts      # Optional cloud storage integration
-│   ├── components/
-│   │   ├── BuildPanel.svelte
-│   │   ├── MarketPanel.svelte
-│   │   ├── FinancePanel.svelte
-│   │   ├── AutomationPanel.svelte
-│   │   ├── InfinityProjects.svelte
-│   │   └── HUD/
-│   │       ├── ResourceBar.svelte
-│   │       └── NotificationFeed.svelte
-│   ├── lib/
-│   │   ├── uiTheme.ts            # Tailwind + design token bridge
-│   │   └── math.ts               # Utility helpers for curves and RNG
-│   └── styles.css
+│   ├── App.svelte                # Root application shell and layout
+│   ├── app.css                   # Tailwind entry point + global backdrop
+│   ├── main.ts                   # Bootstraps the Svelte app
+│   └── lib/
+│       ├── components/           # UI building blocks for the command console
+│       │   ├── ActionDeck.svelte
+│       │   ├── EventLog.svelte
+│       │   ├── MarketPulse.svelte
+│       │   ├── MetricCard.svelte
+│       │   └── StatBoard.svelte
+│       ├── data/
+│       │   └── actions.ts        # Action catalogue + metadata
+│       ├── simulation/
+│       │   ├── actions.ts        # Effects triggered by player commands
+│       │   ├── helpers.ts        # Logging + cooldown utilities
+│       │   └── tick.ts           # Deterministic daily tick logic
+│       ├── stores/
+│       │   └── game.ts           # Writable store + RAF game loop
+│       ├── types/
+│       │   └── game.ts           # Shared TypeScript interfaces
+│       └── utils/
+│           ├── format.ts         # Number and currency formatters
+│           └── random.ts         # Seeded RNG helper
 ├── public/
-│   └── favicon.svg
-├── tests/
-│   ├── simulation.spec.ts
-│   └── ui.spec.ts
-├── vite.config.ts
+│   └── vite.svg
+├── docs/
+│   └── simulation-overview.md    # Notes on the tick pipeline
+├── tailwind.config.js
+├── postcss.config.js
 ├── package.json
-└── tailwind.config.cjs
+└── README.md
 ```
 
 ---
 
 ## 🚀 Getting Started
 ```bash
-# 1. Scaffold the project
-npm create vite@latest self-storage-mogul -- --template svelte-ts
+# Use Node.js 20+
 
-# 2. Enter the directory
-cd self-storage-mogul
-
-# 3. Install dependencies
+# Install dependencies
 npm install
 
-# 4. Add TailwindCSS
-npm install -D tailwindcss postcss autoprefixer
-npx tailwindcss init -p
-
-# 5. Configure Tailwind content paths
-# tailwind.config.cjs -> content: ["./index.html", "./src/**/*.{svelte,ts}"]
-
-# 6. Enable base styles
-# src/styles.css should include:
-# @tailwind base;
-# @tailwind components;
-# @tailwind utilities;
-
-# 7. Run the development server
+# Start the development server (http://localhost:5173)
 npm run dev -- --open
+
+# Type-check the project (Svelte + TypeScript)
+npm run check
 ```
 
-> 💡 Tip: For a jump-start, clone this repository instead of scaffolding from scratch.
+TailwindCSS is already configured; hot-module reloading will restyle components as you edit `.svelte` or `.ts` files.
 
 ---
 
@@ -186,12 +184,11 @@ npm run dev -- --open
 - `npm run dev` — Start the dev server with hot-module reloading.
 - `npm run build` — Create an optimized production build.
 - `npm run preview` — Serve the production build locally for smoke tests.
-- `npm run test` — Run Vitest unit tests (simulation math, reducers, UI stores).
-- `npm run lint` — Check code style with ESLint + Prettier.
+- `npm run check` — Run `svelte-check` and TypeScript diagnostics.
 
 ---
 
-## 💾 Saving & Data
+## 💾 Saving & Data *(planned)*
 - Automatic save every 60 seconds and on significant milestones.
 - Manual save/export to JSON for transferring progress between browsers.
 - Optional cloud sync stub ready for integration with Supabase or Firebase.
@@ -200,6 +197,7 @@ npm run dev -- --open
 ---
 
 ## ✅ Testing & Quality
+Current build ships with `npm run check` for type-safety. The roadmap below outlines additional coverage goals.
 | Area | Coverage |
 |------|----------|
 | Simulation math | Deterministic snapshot tests via Vitest |
@@ -253,7 +251,7 @@ Environment variables (optional):
 
 ## 🤝 Contributing
 1. Fork the repo and create a feature branch (`git checkout -b feature/amazing-idea`).
-2. Ensure linting and tests pass (`npm run lint && npm run test`).
+2. Ensure automated checks pass (`npm run check`).
 3. Submit a pull request describing your changes and playtest notes.
 4. Join the discussion on balancing, narrative events, and mod ideas via GitHub Discussions.
 

@@ -1,0 +1,131 @@
+export type LogTone = 'info' | 'positive' | 'warning'
+
+export type GameActionId =
+  | 'expand_capacity'
+  | 'launch_campaign'
+  | 'optimize_pricing'
+  | 'train_ai_manager'
+
+export type GoalMetric = 'occupancy' | 'automation' | 'valuation'
+
+export interface ClockState {
+  day: number
+  month: number
+  year: number
+  speed: number
+}
+
+export interface FacilityMix {
+  climateControlled: number
+  driveUp: number
+  vault: number
+}
+
+export interface FacilityState {
+  name: string
+  location: string
+  totalUnits: number
+  occupiedUnits: number
+  occupancyRate: number
+  averageRent: number
+  mix: FacilityMix
+  reputation: number
+  automationLevel: number
+  prestige: number
+}
+
+export interface FinancialState {
+  cash: number
+  debt: number
+  interestRate: number
+  revenueLastTick: number
+  expensesLastTick: number
+  netLastTick: number
+  valuation: number
+  monthlyDebtService: number
+  burnRate: number
+}
+
+export interface MarketingState {
+  level: number
+  momentum: number
+  brandStrength: number
+}
+
+export interface MarketIntel {
+  demandIndex: number
+  referenceRent: number
+  competitionPressure: number
+  climateRisk: number
+  trend: 'surging' | 'stable' | 'softening'
+  storyBeat: string
+  lastDemandIndex: number
+}
+
+export interface ManagerProfile {
+  id: string
+  name: string
+  archetype: 'atlas' | 'nebula' | 'caretaker'
+  description: string
+  bonuses: {
+    automation: number
+    reputation: number
+    revenue: number
+  }
+  active: boolean
+}
+
+export interface AutomationState {
+  level: number
+  reliability: number
+  aiManager: ManagerProfile | null
+}
+
+export interface GoalState {
+  id: 'stabilize' | 'automate' | 'scale'
+  label: string
+  description: string
+  metric: GoalMetric
+  target: number
+  progress: number
+  completed: boolean
+}
+
+export interface GameLogEntry {
+  id: number
+  tick: number
+  tone: LogTone
+  message: string
+  year: number
+  month: number
+  day: number
+}
+
+export interface ActionDefinition {
+  id: GameActionId
+  title: string
+  description: string
+  impact: string
+  cost: number
+  cooldown: number
+  icon: string
+}
+
+export interface GameState {
+  tick: number
+  clock: ClockState
+  city: string
+  facility: FacilityState
+  financials: FinancialState
+  marketing: MarketingState
+  market: MarketIntel
+  automation: AutomationState
+  goals: GoalState
+  goalStage: number
+  events: GameLogEntry[]
+  unlockedActions: GameActionId[]
+  cooldowns: Partial<Record<GameActionId, number>>
+  seed: number
+  logSequence: number
+  paused: boolean
+}
