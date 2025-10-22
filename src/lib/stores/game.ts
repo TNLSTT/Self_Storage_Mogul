@@ -144,16 +144,24 @@ const createStore = () => {
     persistIfNeeded()
   })
 
+  const effectiveInterval = () => {
+    const speed = Number.isFinite(currentState.clock.speed) && currentState.clock.speed > 0 ? currentState.clock.speed : 1
+    const clamped = Math.min(Math.max(speed, 0.25), 8)
+    return TICK_INTERVAL_MS / clamped
+  }
+
   const loop = (timestamp: number) => {
     if (!running) return
     if (!lastTime) lastTime = timestamp
     let elapsed = timestamp - lastTime
+    let interval = effectiveInterval()
 
-    if (elapsed >= TICK_INTERVAL_MS) {
-      while (elapsed >= TICK_INTERVAL_MS) {
+    if (elapsed >= interval) {
+      while (elapsed >= interval) {
         update((state) => produce(state, (draft) => advanceTick(draft)))
-        lastTime += TICK_INTERVAL_MS
-        elapsed -= TICK_INTERVAL_MS
+        lastTime += interval
+        elapsed -= interval
+        interval = effectiveInterval()
       }
     }
 
@@ -207,6 +215,19 @@ const createStore = () => {
     }
   }
 
+  const setSpeed = (value: number) => {
+    update((state) =>
+      produce(state, (draft) => {
+        const next = Number.isFinite(value) && value > 0 ? value : 1
+        const clamped = Math.min(Math.max(next, 0.25), 8)
+        if (draft.clock.speed === clamped) {
+          return
+        }
+        draft.clock.speed = clamped
+      })
+    )
+  }
+
   const applyAction = (actionId: GameActionId) => {
     update((state) =>
       produce(state, (draft) => {
@@ -249,7 +270,7 @@ const createStore = () => {
     )
   }
 
-  return { subscribe, start, pause, toggle, step, reset, applyAction, saveSnapshot }
+  return { subscribe, start, pause, toggle, step, reset, applyAction, saveSnapshot, setSpeed }
 }
 
 export const game = createStore()

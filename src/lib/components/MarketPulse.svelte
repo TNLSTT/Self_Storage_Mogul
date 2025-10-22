@@ -14,9 +14,18 @@
 
 <section class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6">
   <header class="flex flex-col gap-2 pb-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
+    <div class="space-y-2">
       <h2 class="font-display text-xl text-slate-100">Market Pulse</h2>
-      <p class="text-sm text-slate-400">{formatClock(state)} · {state.city}</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <span
+          class="inline-flex items-center gap-2 rounded-full border border-sky-500/50 bg-sky-500/10 px-3 py-1 text-sm font-medium text-sky-100"
+          aria-live="polite"
+        >
+          <span class="text-[10px] font-semibold uppercase tracking-[0.32em] text-sky-300">Date</span>
+          {formatClock(state)}
+        </span>
+        <span class="text-sm text-slate-400">{state.city}</span>
+      </div>
     </div>
     <div class="flex items-center gap-3 text-sm text-slate-400">
       <span class="inline-flex items-center gap-1 rounded-full border border-slate-700/70 bg-slate-900/70 px-3 py-1">

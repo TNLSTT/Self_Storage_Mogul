@@ -95,7 +95,7 @@ export const formatClock = (state: GameState) => {
 export const advanceTick = (state: Draft<GameState>) => {
   tickCooldowns(state)
   state.tick += 1
-  state.clock.day += DAYS_PER_TICK * state.clock.speed
+  state.clock.day += DAYS_PER_TICK
 
   while (state.clock.day > MONTH_LENGTH) {
     state.clock.day -= MONTH_LENGTH
