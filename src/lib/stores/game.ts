@@ -49,7 +49,20 @@ const createInitialState = (): GameState => {
       occupiedUnits: 104,
       occupancyRate: 104 / 160,
       averageRent: 0,
-      mix: { climateControlled: 60, driveUp: 70, vault: 30 },
+      mix: {
+        climateControlled: {
+          units: 60,
+          dimensions: ['5×5', '5×10', '10×10', '10×15'],
+        },
+        driveUp: {
+          units: 70,
+          dimensions: ['5×10', '10×15', '10×20', '12×30'],
+        },
+        vault: {
+          units: 30,
+          dimensions: ['4×4', '5×5', '6×8', '8×10'],
+        },
+      },
       pricing: createDefaultPricing(),
       delinquency: createDefaultDelinquency(),
       reputation: 62,

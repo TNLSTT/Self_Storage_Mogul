@@ -69,13 +69,14 @@ export const computeTierAverageRate = (tier: PricingTier): number => {
 }
 
 export const computeFacilityAverageRent = (facility: FacilityState): number => {
-  const totalUnits = facility.mix.climateControlled + facility.mix.driveUp + facility.mix.vault
+  const totalUnits =
+    facility.mix.climateControlled.units + facility.mix.driveUp.units + facility.mix.vault.units
   if (totalUnits <= 0) return 0
   const pricing = facility.pricing
   const weighted =
-    facility.mix.climateControlled * computeTierAverageRate(pricing.climateControlled) +
-    facility.mix.driveUp * computeTierAverageRate(pricing.driveUp) +
-    facility.mix.vault * computeTierAverageRate(pricing.vault)
+    facility.mix.climateControlled.units * computeTierAverageRate(pricing.climateControlled) +
+    facility.mix.driveUp.units * computeTierAverageRate(pricing.driveUp) +
+    facility.mix.vault.units * computeTierAverageRate(pricing.vault)
   return weighted / totalUnits
 }
 

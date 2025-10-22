@@ -4,10 +4,18 @@
 
   export let state: GameState
 
-  const mixLabels: Record<string, string> = {
+  type MixKey = keyof GameState['facility']['mix']
+
+  const mixLabels: Record<MixKey, string> = {
     climateControlled: 'Climate Pods',
     driveUp: 'Drive-Up Bays',
     vault: 'Secure Vaults',
+  }
+
+  const mixDescriptions: Record<MixKey, string> = {
+    climateControlled: 'Temperature and humidity managed units ideal for premium goods and sensitive equipment.',
+    driveUp: 'Ground-level roll-up bays with direct vehicle access for quick loading and unloading.',
+    vault: 'High-security vault suites with reinforced access controls for valuables and business archives.',
   }
 
   const formatSignedPercent = (value: number) => (value > 0 ? `+${formatPercent(value)}` : formatPercent(value))
@@ -15,12 +23,17 @@
     Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)
 
   $: totalUnits = Math.max(1, state.facility.totalUnits)
-  $: mixEntries = Object.entries(state.facility.mix).map(([key, value]) => ({
-    key,
-    label: mixLabels[key] ?? key,
-    units: value,
-    share: value / totalUnits,
-  }))
+  $: mixEntries = (Object.keys(state.facility.mix) as MixKey[]).map((key) => {
+    const category = state.facility.mix[key]
+    return {
+      key,
+      label: mixLabels[key] ?? key,
+      description: mixDescriptions[key] ?? '',
+      units: category.units,
+      share: category.units / totalUnits,
+      dimensions: category.dimensions,
+    }
+  })
   $: pricingEntries = [
     {
       key: 'climateControlled',
@@ -82,13 +95,35 @@
   <div class="grid gap-5 lg:grid-cols-2">
     <div class="space-y-4">
       <div>
-        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Unit Mix</h3>
+        <h3
+          class="text-sm font-semibold uppercase tracking-widest text-slate-400"
+          title="Breakdown of available units by product type, including the most common square footage options."
+        >
+          Unit Mix
+        </h3>
         <ul class="mt-3 space-y-2">
           {#each mixEntries as entry (entry.key)}
             <li class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
               <div class="flex items-center justify-between text-sm text-slate-300">
-                <span>{entry.label}</span>
-                <span>{formatPercent(entry.share)}</span>
+                <span class="flex items-center gap-2">
+                  {entry.label}
+                  {#if entry.description}
+                    <button
+                      type="button"
+                      class="cursor-help text-xs text-slate-500 transition-colors hover:text-sky-300 focus:outline-none"
+                      title={entry.description}
+                      aria-label={entry.description}
+                    >
+                      ⓘ
+                    </button>
+                  {/if}
+                </span>
+                <span
+                  class="text-xs text-slate-400"
+                  title={`${formatNumber(entry.units)} of ${formatNumber(totalUnits)} units`}
+                >
+                  {formatPercent(entry.share)}
+                </span>
               </div>
               <div class="mt-2 h-1.5 w-full rounded-full bg-slate-800/70">
                 <div
@@ -96,7 +131,22 @@
                   style={`width: ${Math.min(entry.share * 100, 100)}%`}
                 ></div>
               </div>
-              <p class="mt-1 text-xs text-slate-500">{formatNumber(entry.units)} units live</p>
+              <ul class="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-wide text-slate-400">
+                {#each entry.dimensions as dimension (dimension)}
+                  <li
+                    class="rounded-full border border-slate-800/60 bg-slate-950/60 px-2 py-0.5 text-slate-300"
+                    title={`Popular dimension: ${dimension}`}
+                  >
+                    {dimension}
+                  </li>
+                {/each}
+              </ul>
+              <p
+                class="mt-1 text-xs text-slate-500"
+                title={`Currently ${formatNumber(entry.units)} units in rotation for ${entry.label}.`}
+              >
+                {formatNumber(entry.units)} units live
+              </p>
             </li>
           {/each}
         </ul>
