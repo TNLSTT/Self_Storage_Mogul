@@ -23,18 +23,51 @@
   const formatSpeed = (value: number) =>
     Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)
 
-  $: totalUnits = Math.max(1, state.facility.totalUnits)
-  $: mixEntries = (Object.keys(state.facility.mix) as MixKey[]).map((key) => {
-    const category = state.facility.mix[key]
-    return {
-      key,
-      label: mixLabels[key] ?? key,
-      description: mixDescriptions[key] ?? '',
-      units: category.units,
-      share: category.units / totalUnits,
-      dimensions: category.dimensions,
+  $: totalUnits = state.facility.totalUnits
+  $: safeTotalUnits = Math.max(1, totalUnits)
+  $: occupancyRatio = totalUnits > 0 ? Math.min(Math.max(state.facility.occupiedUnits / totalUnits, 0), 1) : 0
+  $: mixEntries = (() => {
+    const entries = (Object.keys(state.facility.mix) as MixKey[]).map((key) => {
+      const category = state.facility.mix[key]
+      const estimatedRented = Math.round(category.units * occupancyRatio)
+      const rentedUnits = Math.min(Math.max(estimatedRented, 0), category.units)
+      const vacantUnits = Math.max(category.units - rentedUnits, 0)
+
+      return {
+        key,
+        label: mixLabels[key] ?? key,
+        description: mixDescriptions[key] ?? '',
+        units: category.units,
+        share: category.units / safeTotalUnits,
+        rentedUnits,
+        vacantUnits,
+        occupancyRate: category.units > 0 ? rentedUnits / category.units : 0,
+        dimensions: category.dimensions,
+      }
+    })
+
+    const roundedOccupiedUnits = Math.round(state.facility.occupiedUnits)
+    const totalRented = entries.reduce((sum, entry) => sum + entry.rentedUnits, 0)
+    const occupancyGap = roundedOccupiedUnits - totalRented
+
+    if (occupancyGap !== 0 && entries.length > 0) {
+      const candidateIndex = occupancyGap > 0
+        ? entries.findIndex((entry) => entry.vacantUnits > 0)
+        : entries.findIndex((entry) => entry.rentedUnits > 0)
+      const index = candidateIndex === -1 ? entries.length - 1 : candidateIndex
+      const target = entries[index]
+      const adjustedRented = Math.min(Math.max(target.rentedUnits + occupancyGap, 0), target.units)
+
+      entries[index] = {
+        ...target,
+        rentedUnits: adjustedRented,
+        vacantUnits: Math.max(target.units - adjustedRented, 0),
+        occupancyRate: target.units > 0 ? adjustedRented / target.units : 0,
+      }
     }
-  })
+
+    return entries
+  })()
   $: pricingEntries = [
     {
       key: 'climateControlled',
@@ -133,7 +166,26 @@
                   style={`width: ${Math.min(entry.share * 100, 100)}%`}
                 ></div>
               </div>
-              <ul class="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-wide text-slate-400">
+              <dl class="mt-3 grid gap-3 text-[11px] uppercase tracking-wide text-slate-400 sm:grid-cols-3">
+                <div class="space-y-0.5 text-slate-400">
+                  <dt class="text-[10px] text-slate-500">Total</dt>
+                  <dd class="font-medium text-slate-200">{formatNumber(entry.units)} units</dd>
+                </div>
+                <div class="space-y-0.5 text-emerald-300/80">
+                  <dt class="text-[10px]">Rented</dt>
+                  <dd
+                    class="font-medium text-emerald-200"
+                    title={`Estimated ${formatPercent(entry.occupancyRate)} leased`}
+                  >
+                    {formatNumber(entry.rentedUnits)} units
+                  </dd>
+                </div>
+                <div class="space-y-0.5 text-amber-300/80">
+                  <dt class="text-[10px]">Vacant</dt>
+                  <dd class="font-medium text-amber-200">{formatNumber(entry.vacantUnits)} units</dd>
+                </div>
+              </dl>
+              <ul class="mt-3 flex flex-wrap gap-2 text-[11px] uppercase tracking-wide text-slate-400">
                 {#each entry.dimensions as dimension (dimension)}
                   <li
                     class="rounded-full border border-slate-800/60 bg-slate-950/60 px-2 py-0.5 text-slate-300"
@@ -143,12 +195,6 @@
                   </li>
                 {/each}
               </ul>
-              <p
-                class="mt-1 text-xs text-slate-500"
-                title={`Currently ${formatNumber(entry.units)} units in rotation for ${entry.label}.`}
-              >
-                {formatNumber(entry.units)} units live
-              </p>
             </li>
           {/each}
         </ul>
