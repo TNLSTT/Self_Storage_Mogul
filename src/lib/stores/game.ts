@@ -1,11 +1,27 @@
 import { writable } from 'svelte/store'
 import { produce } from 'immer'
 import { ACTION_LOOKUP } from '../data/actions'
+import { createDefaultDelinquency, createDefaultPricing } from '../data/defaults'
 import { applyActionEffects } from '../simulation/actions'
 import { advanceTick, goalForStage, TICK_INTERVAL_MS } from '../simulation/tick'
 import { pushLog } from '../simulation/helpers'
 import { clearSavedGame, loadGame, saveGame } from '../utils/persistence'
-import type { GameActionId, GameState, GoalState } from '../types/game'
+import {
+  type DelinquencyPolicy,
+  type FacilityPricing,
+  type GameActionId,
+  type GameState,
+  type GoalState,
+  type PricingTier,
+} from '../types/game'
+import {
+  computeFacilityAverageRent,
+  normalizeDelinquencyPolicy,
+  normalizeFacilityPricing,
+  normalizePricingTier,
+} from '../utils/facility'
+
+type PricingKey = 'climateControlled' | 'driveUp' | 'vault'
 
 const goalProgressFor = (goal: GoalState, state: GameState) => {
   switch (goal.metric) {
@@ -32,8 +48,10 @@ const createInitialState = (): GameState => {
       totalUnits: 160,
       occupiedUnits: 104,
       occupancyRate: 104 / 160,
-      averageRent: 145,
+      averageRent: 0,
       mix: { climateControlled: 60, driveUp: 70, vault: 30 },
+      pricing: createDefaultPricing(),
+      delinquency: createDefaultDelinquency(),
       reputation: 62,
       automationLevel: 0.32,
       prestige: 0.12,
@@ -76,6 +94,7 @@ const createInitialState = (): GameState => {
     },
   }
 
+  base.facility.averageRent = computeFacilityAverageRent(base.facility)
   base.financials.valuation = Math.max(
     0,
     base.facility.totalUnits * base.facility.averageRent * 8 + base.financials.cash - base.financials.debt
@@ -228,6 +247,47 @@ const createStore = () => {
     )
   }
 
+  const setPricingTier = (key: PricingKey, updates: Partial<PricingTier>) => {
+    update((state) =>
+      produce(state, (draft) => {
+        const pricing = draft.facility.pricing as Record<PricingKey, PricingTier>
+        const current = pricing[key]
+        if (!current) return
+        const next = normalizePricingTier({ ...current, ...updates }, current)
+        pricing[key] = next
+        draft.facility.averageRent = computeFacilityAverageRent(draft.facility)
+      })
+    )
+  }
+
+  const configureSpecials = (options: Partial<FacilityPricing['specials']>) => {
+    update((state) =>
+      produce(state, (draft) => {
+        const current = draft.facility.pricing
+        const next = normalizeFacilityPricing(
+          {
+            ...current,
+            specials: { ...current.specials, ...options },
+          },
+          current
+        )
+        draft.facility.pricing = next
+        draft.facility.averageRent = computeFacilityAverageRent(draft.facility)
+      })
+    )
+  }
+
+  const updateDelinquency = (updates: Partial<DelinquencyPolicy>) => {
+    update((state) =>
+      produce(state, (draft) => {
+        draft.facility.delinquency = normalizeDelinquencyPolicy(
+          { ...draft.facility.delinquency, ...updates },
+          draft.facility.delinquency
+        )
+      })
+    )
+  }
+
   const applyAction = (actionId: GameActionId) => {
     update((state) =>
       produce(state, (draft) => {
@@ -270,7 +330,20 @@ const createStore = () => {
     )
   }
 
-  return { subscribe, start, pause, toggle, step, reset, applyAction, saveSnapshot, setSpeed }
+  return {
+    subscribe,
+    start,
+    pause,
+    toggle,
+    step,
+    reset,
+    applyAction,
+    saveSnapshot,
+    setSpeed,
+    setPricingTier,
+    configureSpecials,
+    updateDelinquency,
+  }
 }
 
 export const game = createStore()

@@ -21,6 +21,48 @@
     units: value,
     share: value / totalUnits,
   }))
+  $: pricingEntries = [
+    {
+      key: 'climateControlled',
+      label: mixLabels.climateControlled,
+      standard: state.facility.pricing.climateControlled.standard,
+      prime: state.facility.pricing.climateControlled.prime,
+      primeShare: state.facility.pricing.climateControlled.primeShare,
+      premium:
+        state.facility.pricing.climateControlled.standard > 0
+          ? state.facility.pricing.climateControlled.prime /
+              state.facility.pricing.climateControlled.standard -
+            1
+          : 0,
+    },
+    {
+      key: 'driveUp',
+      label: mixLabels.driveUp,
+      standard: state.facility.pricing.driveUp.standard,
+      prime: state.facility.pricing.driveUp.prime,
+      primeShare: state.facility.pricing.driveUp.primeShare,
+      premium:
+        state.facility.pricing.driveUp.standard > 0
+          ? state.facility.pricing.driveUp.prime / state.facility.pricing.driveUp.standard - 1
+          : 0,
+    },
+    {
+      key: 'vault',
+      label: mixLabels.vault,
+      standard: state.facility.pricing.vault.standard,
+      prime: state.facility.pricing.vault.prime,
+      primeShare: state.facility.pricing.vault.primeShare,
+      premium:
+        state.facility.pricing.vault.standard > 0
+          ? state.facility.pricing.vault.prime / state.facility.pricing.vault.standard - 1
+          : 0,
+    },
+  ]
+  $: specialSummary =
+    state.facility.pricing.specials.offer === 'one_month_free'
+      ? `Promo: One month free · ${formatPercent(state.facility.pricing.specials.adoptionRate)}`
+      : 'No rent specials active.'
+  $: delinquencyPolicy = state.facility.delinquency
 
   $: marketingMomentum = Math.min(Math.max(state.marketing.momentum, 0), 2)
   $: brandStrength = Math.min(Math.max(state.marketing.brandStrength, 0), 1)
@@ -58,6 +100,25 @@
             </li>
           {/each}
         </ul>
+      </div>
+      <div class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
+        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Pricing Matrix</h3>
+        <ul class="mt-3 space-y-2">
+          {#each pricingEntries as tier (tier.key)}
+            <li class="rounded-lg border border-slate-800/60 bg-slate-900/60 px-3 py-2">
+              <div class="flex items-center justify-between text-sm text-slate-200">
+                <span>{tier.label}</span>
+                <span>{formatCurrency(tier.standard)}</span>
+              </div>
+              <div class="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <span>Prime {formatCurrency(tier.prime)}</span>
+                <span>Premium {formatPercent(tier.premium)}</span>
+                <span>{formatPercent(tier.primeShare)} prime mix</span>
+              </div>
+            </li>
+          {/each}
+        </ul>
+        <p class="mt-3 text-xs text-slate-500">{specialSummary}</p>
       </div>
       <div class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
         <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Capital Position</h3>
@@ -108,6 +169,15 @@
         {:else}
           <p class="mt-3 text-xs text-slate-500">Manual crews rotating shifts. Train an AI manager to unlock bonuses.</p>
         {/if}
+      </div>
+      <div class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
+        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Delinquency Outlook</h3>
+        <div class="mt-2 flex items-center justify-between text-sm text-slate-300">
+          <span>Delinquent Rate</span>
+          <span>{formatPercent(delinquencyPolicy.rate)}</span>
+        </div>
+        <p class="mt-2 text-xs text-slate-400">{delinquencyPolicy.allowPaymentPlans ? 'Payment plans offered before legal escalation.' : 'Strict eviction once grace lapses.'}</p>
+        <p class="mt-1 text-xs text-slate-500">Eviction trigger {delinquencyPolicy.evictionDays} days late</p>
       </div>
     </div>
   </div>

@@ -28,6 +28,30 @@ export interface FacilityMix {
   vault: number
 }
 
+export interface PricingTier {
+  standard: number
+  prime: number
+  primeShare: number
+}
+
+export interface PricingSpecials {
+  offer: 'none' | 'one_month_free'
+  adoptionRate: number
+}
+
+export interface FacilityPricing {
+  climateControlled: PricingTier
+  driveUp: PricingTier
+  vault: PricingTier
+  specials: PricingSpecials
+}
+
+export interface DelinquencyPolicy {
+  rate: number
+  allowPaymentPlans: boolean
+  evictionDays: number
+}
+
 export interface FacilityState {
   name: string
   location: string
@@ -36,6 +60,8 @@ export interface FacilityState {
   occupancyRate: number
   averageRent: number
   mix: FacilityMix
+  pricing: FacilityPricing
+  delinquency: DelinquencyPolicy
   reputation: number
   automationLevel: number
   prestige: number

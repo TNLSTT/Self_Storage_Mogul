@@ -1,7 +1,13 @@
 import type { GameActionId, GameState } from '../types/game'
+import { createDefaultDelinquency, createDefaultPricing } from '../data/defaults'
+import {
+  computeFacilityAverageRent,
+  normalizeDelinquencyPolicy,
+  normalizeFacilityPricing,
+} from '../utils/facility'
 
 const STORAGE_KEY = 'self-storage-mogul-save'
-const CURRENT_VERSION = 1
+const CURRENT_VERSION = 2
 const HISTORY_LIMIT = 72
 
 interface SaveFile {
@@ -59,9 +65,17 @@ const finalizeState = (merged: GameState): GameState => {
     },
   }
 
+  const pricingDefaults = createDefaultPricing()
+  const delinquencyDefaults = createDefaultDelinquency()
+  state.facility.pricing = normalizeFacilityPricing(state.facility.pricing, pricingDefaults)
+  state.facility.delinquency = normalizeDelinquencyPolicy(
+    state.facility.delinquency,
+    delinquencyDefaults
+  )
   state.facility.occupancyRate = state.facility.totalUnits
     ? state.facility.occupiedUnits / state.facility.totalUnits
     : 0
+  state.facility.averageRent = computeFacilityAverageRent(state.facility)
   state.financials.monthlyDebtService = (state.financials.debt * state.financials.interestRate) / 12
   state.financials.burnRate = state.financials.expensesLastTick - state.financials.revenueLastTick
   state.financials.valuation = Math.max(

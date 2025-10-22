@@ -4,6 +4,7 @@
   import EventLog from './lib/components/EventLog.svelte'
   import FacilityOverview from './lib/components/FacilityOverview.svelte'
   import MarketPulse from './lib/components/MarketPulse.svelte'
+  import PricingControls from './lib/components/PricingControls.svelte'
   import StatBoard from './lib/components/StatBoard.svelte'
   import ToplineTicker from './lib/components/ToplineTicker.svelte'
   import { game } from './lib/stores/game'
@@ -120,6 +121,7 @@
         <div class="space-y-6">
           <MarketPulse {state} />
           <FacilityOverview {state} />
+          <PricingControls {state} />
           <ActionDeck {state} on:select={handleAction} />
         </div>
         <EventLog events={state.events} />
