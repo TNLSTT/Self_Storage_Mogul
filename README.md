@@ -37,8 +37,11 @@ The current build focuses on the **Harbor One command console**, a single-facili
   manager training—all wired into the simulation pipeline with cooldowns and cash gating.
 - **AI dispatch feed & dashboards** that surface the latest events, KPIs, and goal progress so you can react without digging
   through spreadsheets.
+- **Operations overview & trend sparklines** that surface unit mix, marketing momentum, and automation reliability alongside
+  live KPI charts.
 - **Goal progression ladder** that graduates from stabilization to automation and valuation growth, unlocking new actions along
   the way.
+- **Versioned autosave system** that writes to local storage while allowing manual "Save Snapshot" restores mid-run.
 
 Everything runs client-side with Vite + Svelte + Tailwind. No backend services are required.
 
@@ -117,7 +120,7 @@ Each Infinity Project resets parts of your progress while granting permanent met
 | **Styling** | [TailwindCSS](https://tailwindcss.com) + custom design tokens | Consistent theming and rapid iteration |
 | **State** | [Svelte Stores](https://svelte.dev/docs/svelte-store) + [Immer](https://immerjs.github.io/immer/) | Immutable game state mutations |
 | **Game Loop** | `requestAnimationFrame` + fall back `setInterval` | Deterministic tick system |
-| **Persistence** | Browser `localStorage` hooks *(planned)* | Automatic save/load |
+| **Persistence** | Browser `localStorage` hooks | Automatic save/load + manual snapshots |
 | **Tooling** | TypeScript, ESLint, Prettier, Vitest | Reliability and DX |
 | **Hosting** | Vercel, Netlify, or GitHub Pages | Zero-backend deployment |
 
@@ -188,11 +191,11 @@ TailwindCSS is already configured; hot-module reloading will restyle components 
 
 ---
 
-## 💾 Saving & Data *(planned)*
-- Automatic save every 60 seconds and on significant milestones.
-- Manual save/export to JSON for transferring progress between browsers.
-- Optional cloud sync stub ready for integration with Supabase or Firebase.
-- Versioned save format with migration helpers to keep old playthroughs compatible.
+## 💾 Saving & Data
+- Autosave streams the full game state to local storage every few ticks, keeping browser sessions resilient.
+- The in-app **Save Snapshot** button forces an immediate write and logs confirmation in the Operations Feed.
+- Resetting the scenario clears persisted data so you can spin up a fresh timeline without manual cleanup.
+- Save files are version tagged to support future migration helpers and optional cloud sync integrations.
 
 ---
 

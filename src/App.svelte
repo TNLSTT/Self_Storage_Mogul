@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from 'svelte'
   import ActionDeck from './lib/components/ActionDeck.svelte'
   import EventLog from './lib/components/EventLog.svelte'
+  import FacilityOverview from './lib/components/FacilityOverview.svelte'
   import MarketPulse from './lib/components/MarketPulse.svelte'
   import StatBoard from './lib/components/StatBoard.svelte'
   import { game } from './lib/stores/game'
@@ -26,6 +27,10 @@
 
   const handleReset = () => {
     game.reset()
+  }
+
+  const handleSave = () => {
+    game.saveSnapshot()
   }
 
   onMount(() => {
@@ -71,6 +76,12 @@
         >
           Reset Scenario
         </button>
+        <button
+          class="rounded-full border border-emerald-400/60 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
+          on:click={handleSave}
+        >
+          Save Snapshot
+        </button>
       </div>
     </header>
 
@@ -79,6 +90,7 @@
       <div class="grid gap-6 lg:grid-cols-[2fr,1fr]">
         <div class="space-y-6">
           <MarketPulse {state} />
+          <FacilityOverview {state} />
           <ActionDeck {state} on:select={handleAction} />
         </div>
         <EventLog events={state.events} />
