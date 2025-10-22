@@ -53,6 +53,7 @@ export interface FacilityPricing {
 }
 
 export interface DelinquencyPolicy {
+  baseRate: number
   rate: number
   allowPaymentPlans: boolean
   evictionDays: number
@@ -89,6 +90,7 @@ export interface FinancialState {
   valuation: number
   monthlyDebtService: number
   burnRate: number
+  deferredMaintenance: number
 }
 
 export interface MarketingState {
