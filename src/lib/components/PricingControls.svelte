@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { GameState } from '../types/game'
   import { formatCurrency, formatPercent } from '../utils/format'
+  import { DELINQUENCY_IMPACT_TOOLTIP } from '../constants/tooltips'
   import { game } from '../stores/game'
 
   type PricingKey = 'climateControlled' | 'driveUp' | 'vault'
@@ -54,6 +55,8 @@
     if (!Number.isFinite(value)) return
     game.updateDelinquency({ evictionDays: value })
   }
+
+  $: delinquencyOccupancyDrag = state.facility.delinquency.rate * 0.25
 </script>
 
 <section class="rounded-3xl border border-slate-800/70 bg-slate-950/60 p-6 shadow-xl shadow-slate-900/40">
@@ -147,7 +150,17 @@
       <div class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
         <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Delinquency Policy</h3>
         <div class="mt-3 flex items-center justify-between text-sm text-slate-200">
-          <span>Expected Rate</span>
+          <span class="flex items-center gap-2">
+            Expected Rate
+            <button
+              type="button"
+              class="cursor-help text-xs text-slate-500 transition-colors hover:text-sky-300 focus:outline-none"
+              title={DELINQUENCY_IMPACT_TOOLTIP}
+              aria-label={DELINQUENCY_IMPACT_TOOLTIP}
+            >
+              ⓘ
+            </button>
+          </span>
           <span>{formatPercent(state.facility.delinquency.rate)}</span>
         </div>
         <input
@@ -182,8 +195,10 @@
           Offer Payment Plans
         </label>
         <p class="mt-2 text-xs text-slate-500">
-          Softer policies improve retention but can slow cash collection. Shorter grace periods clear inventory faster at the cost
-          of satisfaction.
+          Higher delinquency lowers target occupancy by roughly {formatPercent(delinquencyOccupancyDrag)}, forces more evictions
+          once the {state.facility.delinquency.evictionDays}-day grace period expires, and keeps revenue delinquent until
+          collected. Payment plans cushion churn but delay cash, while shorter grace periods recycle inventory at the expense of
+          satisfaction and reputation.
         </p>
       </div>
     </div>

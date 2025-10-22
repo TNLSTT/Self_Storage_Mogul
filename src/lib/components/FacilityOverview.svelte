@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { GameState } from '../types/game'
   import { formatCurrency, formatNumber, formatPercent } from '../utils/format'
+  import { DELINQUENCY_IMPACT_TOOLTIP } from '../constants/tooltips'
 
   export let state: GameState
 
@@ -76,6 +77,7 @@
       ? `Promo: One month free · ${formatPercent(state.facility.pricing.specials.adoptionRate)}`
       : 'No rent specials active.'
   $: delinquencyPolicy = state.facility.delinquency
+  $: delinquencyOccupancyDrag = delinquencyPolicy.rate * 0.25
 
   $: marketingMomentum = Math.min(Math.max(state.marketing.momentum, 0), 2)
   $: brandStrength = Math.min(Math.max(state.marketing.brandStrength, 0), 1)
@@ -223,10 +225,25 @@
       <div class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
         <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Delinquency Outlook</h3>
         <div class="mt-2 flex items-center justify-between text-sm text-slate-300">
-          <span>Delinquent Rate</span>
+          <span class="flex items-center gap-2">
+            Delinquent Rate
+            <button
+              type="button"
+              class="cursor-help text-xs text-slate-500 transition-colors hover:text-sky-300 focus:outline-none"
+              title={DELINQUENCY_IMPACT_TOOLTIP}
+              aria-label={DELINQUENCY_IMPACT_TOOLTIP}
+            >
+              ⓘ
+            </button>
+          </span>
           <span>{formatPercent(delinquencyPolicy.rate)}</span>
         </div>
         <p class="mt-2 text-xs text-slate-400">{delinquencyPolicy.allowPaymentPlans ? 'Payment plans offered before legal escalation.' : 'Strict eviction once grace lapses.'}</p>
+        <p class="mt-1 text-xs text-slate-400">
+          At this level the delinquency drag trims roughly {formatPercent(delinquencyOccupancyDrag)} from target occupancy,
+          adds eviction churn once the {delinquencyPolicy.evictionDays}-day grace window closes, and keeps revenue tied up until
+          accounts recover.
+        </p>
         <p class="mt-1 text-xs text-slate-500">Eviction trigger {delinquencyPolicy.evictionDays} days late</p>
       </div>
     </div>
