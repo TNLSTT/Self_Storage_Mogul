@@ -37,13 +37,6 @@
     game.configureSpecials({ adoptionRate: value / 100 })
   }
 
-  const adjustDelinquencyRate = (event: Event) => {
-    const target = event.currentTarget as HTMLInputElement
-    const value = Number(target.value)
-    if (!Number.isFinite(value)) return
-    game.updateDelinquency({ rate: value / 100 })
-  }
-
   const togglePaymentPlan = (event: Event) => {
     const target = event.currentTarget as HTMLInputElement
     game.updateDelinquency({ allowPaymentPlans: target.checked })
@@ -57,6 +50,7 @@
   }
 
   $: delinquencyOccupancyDrag = state.facility.delinquency.rate * 0.25
+  $: maintenanceBacklog = state.financials.deferredMaintenance
 </script>
 
 <section class="rounded-3xl border border-slate-800/70 bg-slate-950/60 p-6 shadow-xl shadow-slate-900/40">
@@ -163,15 +157,14 @@
           </span>
           <span>{formatPercent(state.facility.delinquency.rate)}</span>
         </div>
-        <input
-          class="mt-2 w-full accent-emerald-400"
-          type="range"
-          min="0"
-          max="20"
-          step="0.5"
-          value={state.facility.delinquency.rate * 100}
-          on:input={adjustDelinquencyRate}
-        />
+        <p class="mt-2 text-xs text-slate-500">
+          Rate shifts automatically based on pricing pressure, reputation, and upkeep. Expensive rents,
+          frustrated residents, and a growing maintenance backlog all push delinquency higher.
+        </p>
+        <div class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.25em] text-slate-500">
+          <span>Deferred Maintenance</span>
+          <span class="text-slate-300 normal-case tracking-normal">{formatCurrency(maintenanceBacklog)}</span>
+        </div>
         <div class="mt-3 flex items-center justify-between text-sm text-slate-200">
           <span>Grace Period</span>
           <span>{state.facility.delinquency.evictionDays} days</span>

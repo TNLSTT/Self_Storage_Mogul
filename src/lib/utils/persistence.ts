@@ -96,6 +96,10 @@ const finalizeState = (merged: GameState): GameState => {
   state.financials.averageDailyRent = snapshot.averageDailyRent
   state.financials.effectiveOccupancyRate = snapshot.effectiveOccupancyRate
   state.financials.delinquentShare = snapshot.delinquentShare
+  const maintenance = Number.isFinite(state.financials.deferredMaintenance)
+    ? (state.financials.deferredMaintenance as number)
+    : 0
+  state.financials.deferredMaintenance = Math.min(Math.max(maintenance, 0), 250000)
   state.financials.monthlyDebtService = (state.financials.debt * state.financials.interestRate) / 12
   state.financials.burnRate = state.financials.expensesLastTick - state.financials.revenueLastTick
   state.financials.valuation = Math.max(

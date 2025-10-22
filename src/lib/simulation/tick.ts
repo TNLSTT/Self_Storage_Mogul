@@ -129,11 +129,6 @@ export const advanceTick = (state: Draft<GameState>) => {
   const specialDiscount = specialsDiscountFactor(state.facility.pricing)
 
   const delinquencyPolicy = state.facility.delinquency
-  const delinquencyRate = clamp(delinquencyPolicy.rate, 0, 0.3)
-  const evictionUrgency = evictionUrgencyFactor(delinquencyPolicy)
-  const collectionRate = paymentPlanCollectionRate(delinquencyPolicy)
-  const delinquencyDrag =
-    delinquencyRate * (delinquencyPolicy.allowPaymentPlans ? 0.05 : 0.12) + evictionUrgency * 0.05
 
   const demandNoise = nextRandom(state) * 0.06 - 0.03
   const macroWave = nextRandom(state) * 0.03 - 0.015
@@ -146,6 +141,25 @@ export const advanceTick = (state: Draft<GameState>) => {
     (state.facility.averageRent - state.market.referenceRent) / state.market.referenceRent
   )
   const competitionDrag = state.market.competitionPressure * 0.05
+  const maintenancePressure = clamp(state.financials.deferredMaintenance / 150000, 0, 0.35)
+  const reputationPenalty = clamp((58 - state.facility.reputation) / 90, 0, 0.4)
+  const delinquencyNoise = nextRandom(state) * 0.02 - 0.01
+  const baseDelinquency = clamp(delinquencyPolicy.baseRate, 0.01, 0.2)
+  const targetDelinquencyRate = clamp(
+    baseDelinquency + pricePressure * 0.16 + reputationPenalty * 0.1 + maintenancePressure * 0.6 + delinquencyNoise,
+    0.015,
+    0.25
+  )
+  const delinquencyRate = clamp(
+    delinquencyPolicy.rate + (targetDelinquencyRate - delinquencyPolicy.rate) * 0.35,
+    0.01,
+    0.25
+  )
+  delinquencyPolicy.rate = delinquencyRate
+  const evictionUrgency = evictionUrgencyFactor(delinquencyPolicy)
+  const collectionRate = paymentPlanCollectionRate(delinquencyPolicy)
+  const delinquencyDrag =
+    delinquencyRate * (delinquencyPolicy.allowPaymentPlans ? 0.05 : 0.12) + evictionUrgency * 0.05
 
   state.market.demandIndex = clamp(
     state.market.demandIndex +
@@ -262,6 +276,16 @@ export const advanceTick = (state: Draft<GameState>) => {
   state.financials.averageDailyRent = cashFlow.averageDailyRent
   state.financials.effectiveOccupancyRate = cashFlow.effectiveOccupancyRate
   state.financials.delinquentShare = cashFlow.delinquentShare
+  const occupancyStress = Math.max(0, state.facility.occupancyRate - 0.82)
+  const backlogGrowth =
+    Math.max(0, net < 0 ? Math.min(350, Math.abs(net) * 0.02) : 0) +
+    Math.max(0, occupancyStress * 40 + pricePressure * 110)
+  const backlogReduction = net > 0 ? Math.min(state.financials.deferredMaintenance, net * 0.015) : 0
+  state.financials.deferredMaintenance = clamp(
+    state.financials.deferredMaintenance + backlogGrowth - backlogReduction,
+    0,
+    250000
+  )
   state.financials.burnRate = cashFlow.dailyExpenses - cashFlow.dailyRevenue
   state.financials.monthlyDebtService = (state.financials.debt * state.financials.interestRate) / 12
   state.financials.valuation = Math.max(

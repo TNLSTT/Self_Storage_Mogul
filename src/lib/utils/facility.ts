@@ -50,6 +50,11 @@ export const normalizeDelinquencyPolicy = (
   incoming: Partial<DelinquencyPolicy> | undefined,
   fallback: DelinquencyPolicy
 ): DelinquencyPolicy => ({
+  baseRate: clampNumber(
+    Number.isFinite(incoming?.baseRate) ? (incoming?.baseRate as number) : fallback.baseRate,
+    0.01,
+    0.2
+  ),
   rate: clampNumber(
     Number.isFinite(incoming?.rate) ? (incoming?.rate as number) : fallback.rate,
     0,

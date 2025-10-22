@@ -8,6 +8,7 @@ export const createDefaultPricing = (): FacilityPricing => ({
 })
 
 export const createDefaultDelinquency = (): DelinquencyPolicy => ({
+  baseRate: 0.04,
   rate: 0.045,
   allowPaymentPlans: true,
   evictionDays: 45,

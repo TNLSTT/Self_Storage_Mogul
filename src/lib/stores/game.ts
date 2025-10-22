@@ -7,6 +7,7 @@ import { advanceTick, goalForStage, TICK_INTERVAL_MS } from '../simulation/tick'
 import { computeCashFlowSnapshot } from '../simulation/finance'
 import { pushLog } from '../simulation/helpers'
 import { clearSavedGame, loadGame, saveGame } from '../utils/persistence'
+import { randomBetween } from '../utils/random'
 import {
   type DelinquencyPolicy,
   type FacilityPricing,
@@ -86,6 +87,7 @@ const createInitialState = (): GameState => {
       valuation: 0,
       monthlyDebtService: 0,
       burnRate: 0,
+      deferredMaintenance: 12000,
     },
     marketing: { level: 2, momentum: 0.4, brandStrength: 0.35 },
     market: {
@@ -114,6 +116,11 @@ const createInitialState = (): GameState => {
       demand: [],
     },
   }
+
+  const seededBaseRate = randomBetween(base, 0.028, 0.072)
+  base.facility.delinquency.baseRate = seededBaseRate
+  const initialRate = seededBaseRate + randomBetween(base, -0.008, 0.014)
+  base.facility.delinquency.rate = Math.min(Math.max(initialRate, 0.015), 0.2)
 
   base.facility.averageRent = computeFacilityAverageRent(base.facility)
   base.financials.valuation = Math.max(
