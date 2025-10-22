@@ -13,6 +13,7 @@ loop exposed by `src/lib/stores/game.ts` and is implemented in `src/lib/simulati
 6. **Financials** – Calculate revenue, expenses, debt service, and update cash, valuation, and burn rate.
 7. **Story Beats** – Refresh market narratives and emit warnings for climate risk or low liquidity.
 8. **Unlocks & Goals** – Unlock new actions (AI manager training) and promote the active goal when its metric crosses the target.
+9. **Telemetry** – Append cash, net income, occupancy, and demand snapshots to history arrays powering the UI sparklines.
 
 ## Deterministic Randomness
 
@@ -27,11 +28,12 @@ Immer drafts so complex mutations remain ergonomic while keeping updates immutab
 ## State Management
 
 - `src/lib/stores/game.ts` holds the writable store, start/pause/reset helpers, and the animation frame loop.
+- `src/lib/utils/persistence.ts` serializes the game state into versioned localStorage snapshots and sanitizes restores.
 - `src/lib/types/game.ts` defines all shared interfaces.
 - UI components read directly from the store (`App.svelte` subscribes on mount) and dispatch actions via custom events.
 
 ## Future Extensions
 
-- Persist saves with localStorage snapshots.
 - Add competitor AI modules that feed into the demand/competition curves.
 - Introduce modular facility upgrades that plug into the same action system.
+- Wire browser storage sync (e.g., Supabase, Firebase) for cross-device play.

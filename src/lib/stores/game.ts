@@ -4,6 +4,7 @@ import { ACTION_LOOKUP } from '../data/actions'
 import { applyActionEffects } from '../simulation/actions'
 import { advanceTick, goalForStage, TICK_INTERVAL_MS } from '../simulation/tick'
 import { pushLog } from '../simulation/helpers'
+import { clearSavedGame, loadGame, saveGame } from '../utils/persistence'
 import type { GameActionId, GameState, GoalState } from '../types/game'
 
 const goalProgressFor = (goal: GoalState, state: GameState) => {
@@ -67,6 +68,12 @@ const createInitialState = (): GameState => {
     seed: 112358,
     logSequence: 0,
     paused: true,
+    history: {
+      cash: [],
+      net: [],
+      occupancy: [],
+      demand: [],
+    },
   }
 
   base.financials.valuation = Math.max(
@@ -76,6 +83,11 @@ const createInitialState = (): GameState => {
   base.financials.monthlyDebtService = (base.financials.debt * base.financials.interestRate) / 12
   base.goals.progress = goalProgressFor(goal, base)
   base.goals.completed = base.goals.progress >= base.goals.target
+
+  base.history.cash = [base.financials.cash]
+  base.history.net = [base.financials.netLastTick]
+  base.history.occupancy = [base.facility.occupancyRate]
+  base.history.demand = [base.market.demandIndex]
 
   base.events = [
     {
@@ -102,11 +114,35 @@ const createInitialState = (): GameState => {
 }
 
 const createStore = () => {
-  const { subscribe, update, set } = writable<GameState>(createInitialState())
+  const baseState = createInitialState()
+  const initialState = typeof window !== 'undefined' ? loadGame(baseState) ?? baseState : baseState
+  const { subscribe, update, set } = writable<GameState>(initialState)
 
   let frame: number | null = null
   let running = false
   let lastTime = 0
+  let lastPersist = 0
+  let skipPersist = true
+  let currentState = initialState
+
+  const persistIfNeeded = () => {
+    if (typeof window === 'undefined') return
+    if (skipPersist) {
+      skipPersist = false
+      return
+    }
+    const now = Date.now()
+    if (now - lastPersist < 2000) {
+      return
+    }
+    saveGame(currentState)
+    lastPersist = now
+  }
+
+  subscribe((value) => {
+    currentState = value
+    persistIfNeeded()
+  })
 
   const loop = (timestamp: number) => {
     if (!running) return
@@ -164,7 +200,11 @@ const createStore = () => {
 
   const reset = () => {
     pause()
+    skipPersist = true
     set(createInitialState())
+    if (typeof window !== 'undefined') {
+      clearSavedGame()
+    }
   }
 
   const applyAction = (actionId: GameActionId) => {
@@ -198,7 +238,18 @@ const createStore = () => {
     )
   }
 
-  return { subscribe, start, pause, toggle, step, reset, applyAction }
+  const saveSnapshot = () => {
+    if (typeof window === 'undefined') return
+    saveGame(currentState)
+    lastPersist = Date.now()
+    update((state) =>
+      produce(state, (draft) => {
+        pushLog(draft, 'Manual snapshot saved to local storage.', 'info')
+      })
+    )
+  }
+
+  return { subscribe, start, pause, toggle, step, reset, applyAction, saveSnapshot }
 }
 
 export const game = createStore()

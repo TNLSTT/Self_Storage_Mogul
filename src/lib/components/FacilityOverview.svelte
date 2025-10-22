@@ -1,0 +1,112 @@
+<script lang="ts">
+  import type { GameState } from '../types/game'
+  import { formatCurrency, formatNumber, formatPercent } from '../utils/format'
+
+  export let state: GameState
+
+  const mixLabels: Record<string, string> = {
+    climateControlled: 'Climate Pods',
+    driveUp: 'Drive-Up Bays',
+    vault: 'Secure Vaults',
+  }
+
+  const formatSignedPercent = (value: number) => (value > 0 ? `+${formatPercent(value)}` : formatPercent(value))
+
+  $: totalUnits = Math.max(1, state.facility.totalUnits)
+  $: mixEntries = Object.entries(state.facility.mix).map(([key, value]) => ({
+    key,
+    label: mixLabels[key] ?? key,
+    units: value,
+    share: value / totalUnits,
+  }))
+
+  $: marketingMomentum = Math.min(Math.max(state.marketing.momentum, 0), 2)
+  $: brandStrength = Math.min(Math.max(state.marketing.brandStrength, 0), 1)
+  $: automationReliability = Math.min(Math.max(state.automation.reliability, 0), 1)
+  $: speedDisplay = `×${state.clock.speed.toFixed(1)}`
+</script>
+
+<section class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6 shadow-lg shadow-slate-900/40">
+  <header class="flex flex-col gap-2 pb-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h2 class="font-display text-xl text-slate-100">Facility Operations</h2>
+      <p class="text-sm text-slate-400">Crew readiness, unit mix, and automation health at a glance.</p>
+    </div>
+    <div class="text-sm text-slate-400">Tick {state.tick} · {speedDisplay} speed</div>
+  </header>
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    <div class="space-y-4">
+      <div>
+        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Unit Mix</h3>
+        <ul class="mt-3 space-y-2">
+          {#each mixEntries as entry (entry.key)}
+            <li class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
+              <div class="flex items-center justify-between text-sm text-slate-300">
+                <span>{entry.label}</span>
+                <span>{formatPercent(entry.share)}</span>
+              </div>
+              <div class="mt-2 h-1.5 w-full rounded-full bg-slate-800/70">
+                <div
+                  class="h-full rounded-full bg-sky-400/80"
+                  style={`width: ${Math.min(entry.share * 100, 100)}%`}
+                ></div>
+              </div>
+              <p class="mt-1 text-xs text-slate-500">{formatNumber(entry.units)} units live</p>
+            </li>
+          {/each}
+        </ul>
+      </div>
+      <div class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
+        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Capital Position</h3>
+        <p class="mt-2 text-sm text-slate-300">Monthly debt service {formatCurrency(state.financials.monthlyDebtService)}</p>
+        <p class="text-xs text-slate-500">Burn rate {formatCurrency(state.financials.burnRate)}</p>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <div class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
+        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Marketing Ops</h3>
+        <p class="mt-2 text-sm text-slate-300">Level {state.marketing.level}</p>
+        <div class="mt-2 space-y-2 text-xs text-slate-400">
+          <div>
+            <div class="flex justify-between"><span>Momentum</span><span>{formatPercent(marketingMomentum / 2)}</span></div>
+            <div class="mt-1 h-1.5 w-full rounded-full bg-slate-800/70">
+              <div class="h-full rounded-full bg-emerald-400/70" style={`width: ${Math.min((marketingMomentum / 2) * 100, 100)}%`}></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between"><span>Brand Strength</span><span>{formatPercent(brandStrength)}</span></div>
+            <div class="mt-1 h-1.5 w-full rounded-full bg-slate-800/70">
+              <div class="h-full rounded-full bg-indigo-400/70" style={`width: ${Math.min(brandStrength * 100, 100)}%`}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-800/70 bg-slate-900/70 px-4 py-3">
+        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Automation & Staffing</h3>
+        <div class="mt-2 flex items-center justify-between text-sm text-slate-300">
+          <span>Reliability</span>
+          <span>{formatPercent(automationReliability)}</span>
+        </div>
+        <div class="mt-1 h-1.5 w-full rounded-full bg-slate-800/70">
+          <div class="h-full rounded-full bg-sky-400/80" style={`width: ${Math.min(automationReliability * 100, 100)}%`}></div>
+        </div>
+        {#if state.automation.aiManager}
+          <div class="mt-3 rounded-lg border border-slate-800/70 bg-slate-900/80 px-3 py-2 text-sm text-slate-300">
+            <p class="font-semibold">{state.automation.aiManager.name}</p>
+            <p class="text-xs text-slate-500">{state.automation.aiManager.description}</p>
+            <ul class="mt-2 grid grid-cols-3 gap-2 text-xs">
+              <li class="rounded-md bg-slate-900/70 px-2 py-1 text-emerald-300">Automation {formatSignedPercent(state.automation.aiManager.bonuses.automation)}</li>
+              <li class="rounded-md bg-slate-900/70 px-2 py-1 text-sky-300">Reputation {formatSignedPercent(state.automation.aiManager.bonuses.reputation)}</li>
+              <li class="rounded-md bg-slate-900/70 px-2 py-1 text-slate-200">Revenue {formatSignedPercent(state.automation.aiManager.bonuses.revenue)}</li>
+            </ul>
+          </div>
+        {:else}
+          <p class="mt-3 text-xs text-slate-500">Manual crews rotating shifts. Train an AI manager to unlock bonuses.</p>
+        {/if}
+      </div>
+    </div>
+  </div>
+</section>

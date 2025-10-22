@@ -8,6 +8,7 @@ export const TICK_INTERVAL_MS = 1000
 const DAYS_PER_TICK = 1
 const MONTH_LENGTH = 30
 const MONTHS_PER_YEAR = 12
+const HISTORY_CAP = 72
 
 const MONTH_NAMES = [
   'Jan',
@@ -78,6 +79,13 @@ const MARKET_BEATS = [
   'Local esports league requests after-hours storage for arenas.',
   'Construction labor shortage easing—permits clearing faster.',
 ]
+
+const pushHistoryPoint = (series: number[], value: number) => {
+  series.push(value)
+  if (series.length > HISTORY_CAP) {
+    series.shift()
+  }
+}
 
 export const formatClock = (state: GameState) => {
   const month = MONTH_NAMES[state.clock.month - 1] ?? 'Jan'
@@ -182,6 +190,11 @@ export const advanceTick = (state: Draft<GameState>) => {
     0,
     state.facility.totalUnits * state.facility.averageRent * 8 + state.financials.cash - state.financials.debt
   )
+
+  pushHistoryPoint(state.history.cash, state.financials.cash)
+  pushHistoryPoint(state.history.net, state.financials.netLastTick)
+  pushHistoryPoint(state.history.occupancy, state.facility.occupancyRate)
+  pushHistoryPoint(state.history.demand, state.market.demandIndex)
 
   if (state.financials.cash < 35000 && state.tick % 6 === 0) {
     pushLog(state, 'Cash reserves drifting low—consider pausing construction.', 'warning')

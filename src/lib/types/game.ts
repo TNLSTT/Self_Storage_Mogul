@@ -8,6 +8,13 @@ export type GameActionId =
 
 export type GoalMetric = 'occupancy' | 'automation' | 'valuation'
 
+export interface HistoryState {
+  cash: number[]
+  net: number[]
+  occupancy: number[]
+  demand: number[]
+}
+
 export interface ClockState {
   day: number
   month: number
@@ -128,4 +135,5 @@ export interface GameState {
   seed: number
   logSequence: number
   paused: boolean
+  history: HistoryState
 }
