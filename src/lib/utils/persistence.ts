@@ -5,6 +5,7 @@ import {
   normalizeDelinquencyPolicy,
   normalizeFacilityPricing,
 } from '../utils/facility'
+import { computeCashFlowSnapshot } from '../simulation/finance'
 
 const STORAGE_KEY = 'self-storage-mogul-save'
 const CURRENT_VERSION = 2
@@ -60,6 +61,9 @@ const finalizeState = (merged: GameState): GameState => {
     history: {
       cash: [...merged.history.cash],
       net: [...merged.history.net],
+      monthlyNet: Array.isArray(merged.history.monthlyNet)
+        ? [...merged.history.monthlyNet]
+        : [],
       occupancy: [...merged.history.occupancy],
       demand: [...merged.history.demand],
     },
@@ -76,6 +80,22 @@ const finalizeState = (merged: GameState): GameState => {
     ? state.facility.occupiedUnits / state.facility.totalUnits
     : 0
   state.facility.averageRent = computeFacilityAverageRent(state.facility)
+  const snapshot = computeCashFlowSnapshot(state)
+  state.financials.revenueLastTick = Number.isFinite(state.financials.revenueLastTick)
+    ? state.financials.revenueLastTick
+    : snapshot.dailyRevenue
+  state.financials.expensesLastTick = Number.isFinite(state.financials.expensesLastTick)
+    ? state.financials.expensesLastTick
+    : snapshot.dailyExpenses
+  state.financials.netLastTick = Number.isFinite(state.financials.netLastTick)
+    ? state.financials.netLastTick
+    : snapshot.operatingDailyNet
+  state.financials.revenueMonthly = state.financials.revenueLastTick * 30
+  state.financials.expensesMonthly = state.financials.expensesLastTick * 30
+  state.financials.netMonthly = state.financials.netLastTick * 30
+  state.financials.averageDailyRent = snapshot.averageDailyRent
+  state.financials.effectiveOccupancyRate = snapshot.effectiveOccupancyRate
+  state.financials.delinquentShare = snapshot.delinquentShare
   state.financials.monthlyDebtService = (state.financials.debt * state.financials.interestRate) / 12
   state.financials.burnRate = state.financials.expensesLastTick - state.financials.revenueLastTick
   state.financials.valuation = Math.max(
@@ -85,6 +105,7 @@ const finalizeState = (merged: GameState): GameState => {
 
   state.history.cash = clampHistory(state.history.cash, [state.financials.cash])
   state.history.net = clampHistory(state.history.net, [state.financials.netLastTick])
+  state.history.monthlyNet = clampHistory(state.history.monthlyNet, [state.financials.netMonthly])
   state.history.occupancy = clampHistory(state.history.occupancy, [state.facility.occupancyRate])
   state.history.demand = clampHistory(state.history.demand, [state.market.demandIndex])
 
@@ -133,6 +154,7 @@ const mergeState = (base: GameState, incoming: GameState): GameState => {
     history: {
       cash: history?.cash ?? base.history.cash,
       net: history?.net ?? base.history.net,
+      monthlyNet: history?.monthlyNet ?? base.history.monthlyNet,
       occupancy: history?.occupancy ?? base.history.occupancy,
       demand: history?.demand ?? base.history.demand,
     },

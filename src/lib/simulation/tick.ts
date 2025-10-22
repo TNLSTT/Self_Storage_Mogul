@@ -9,6 +9,7 @@ import {
   paymentPlanCollectionRate,
   specialsDiscountFactor,
 } from '../utils/facility'
+import { computeCashFlowSnapshot } from './finance'
 
 export const TICK_INTERVAL_MS = 1000
 const DAYS_PER_TICK = 1
@@ -197,21 +198,20 @@ export const advanceTick = (state: Draft<GameState>) => {
   const delinquentUnitsRaw = state.facility.occupiedUnits * delinquencyRate
   const evictionMitigation = delinquencyPolicy.allowPaymentPlans ? 0.5 : 1
   const evictedUnits = delinquentUnitsRaw * evictionUrgency * evictionMitigation
-  if (evictedUnits > 0) {
-    state.facility.occupiedUnits = clamp(
-      state.facility.occupiedUnits - evictedUnits,
-      0,
-      state.facility.totalUnits
-    )
-    state.facility.occupancyRate = state.facility.totalUnits
-      ? state.facility.occupiedUnits / state.facility.totalUnits
-      : 0
-  }
+  const occupancyAfterEviction = clamp(
+    state.facility.occupiedUnits - evictedUnits,
+    0,
+    state.facility.totalUnits
+  )
   const remainingDelinquentUnits = Math.min(
-    state.facility.occupiedUnits,
+    occupancyAfterEviction,
     Math.max(0, delinquentUnitsRaw - evictedUnits)
   )
-  const payingUnits = Math.max(0, state.facility.occupiedUnits - remainingDelinquentUnits)
+  const payingUnits = Math.max(0, occupancyAfterEviction - remainingDelinquentUnits)
+  state.facility.occupiedUnits = occupancyAfterEviction
+  state.facility.occupancyRate = state.facility.totalUnits
+    ? state.facility.occupiedUnits / state.facility.totalUnits
+    : 0
 
   const satisfaction = clamp(
     state.facility.occupancyRate * 0.65 +
@@ -234,15 +234,15 @@ export const advanceTick = (state: Draft<GameState>) => {
 
   const managerRevenueBonus = state.automation.aiManager?.bonuses.revenue ?? 0
   const dailyRent = state.facility.averageRent / 30
-  const effectiveRevenueUnits = (payingUnits + remainingDelinquentUnits * collectionRate) * (1 + managerRevenueBonus)
-  const revenue = effectiveRevenueUnits * dailyRent * (1 - specialDiscount)
-  const operations = (420 + state.facility.totalUnits * 2.6) * (1 - state.automation.level * 0.18)
-  const marketingSpend = 240 * state.marketing.level + state.marketing.momentum * 160
-  const automationSpend = 160 * (1 + state.automation.level * 2)
-  const interest = (state.financials.debt * state.financials.interestRate) / 360
-  const insurance = state.market.climateRisk * 120
-  const expenses = operations + marketingSpend + automationSpend + interest + insurance
-  let net = revenue - expenses
+  const cashFlow = computeCashFlowSnapshot(state, {
+    payingUnits,
+    remainingDelinquentUnits,
+    collectionRate,
+    dailyRent,
+    specialsDiscount: specialDiscount,
+    managerRevenueBonus,
+  })
+  let net = cashFlow.operatingDailyNet
 
   state.financials.cash += net
 
@@ -253,10 +253,16 @@ export const advanceTick = (state: Draft<GameState>) => {
     net -= principalPayment
   }
 
-  state.financials.revenueLastTick = revenue
-  state.financials.expensesLastTick = expenses
+  state.financials.revenueLastTick = cashFlow.dailyRevenue
+  state.financials.expensesLastTick = cashFlow.dailyExpenses
   state.financials.netLastTick = net
-  state.financials.burnRate = expenses - revenue
+  state.financials.revenueMonthly = cashFlow.dailyRevenue * 30
+  state.financials.expensesMonthly = cashFlow.dailyExpenses * 30
+  state.financials.netMonthly = net * 30
+  state.financials.averageDailyRent = cashFlow.averageDailyRent
+  state.financials.effectiveOccupancyRate = cashFlow.effectiveOccupancyRate
+  state.financials.delinquentShare = cashFlow.delinquentShare
+  state.financials.burnRate = cashFlow.dailyExpenses - cashFlow.dailyRevenue
   state.financials.monthlyDebtService = (state.financials.debt * state.financials.interestRate) / 12
   state.financials.valuation = Math.max(
     0,
@@ -265,6 +271,7 @@ export const advanceTick = (state: Draft<GameState>) => {
 
   pushHistoryPoint(state.history.cash, state.financials.cash)
   pushHistoryPoint(state.history.net, state.financials.netLastTick)
+  pushHistoryPoint(state.history.monthlyNet, state.financials.netMonthly)
   pushHistoryPoint(state.history.occupancy, state.facility.occupancyRate)
   pushHistoryPoint(state.history.demand, state.market.demandIndex)
 

@@ -29,6 +29,9 @@
         return `Target ${formatPercent(state.goals.target)}`
     }
   })()
+  $: monthlyNetClass = state.financials.netMonthly >= 0 ? 'text-emerald-300' : 'text-rose-300'
+  $: monthlyCashHint = `Rev ${formatCurrency(state.financials.revenueMonthly)} · Exp ${formatCurrency(state.financials.expensesMonthly)}`
+  $: occupancyHint = `Vacant ${formatNumber(availableUnits)} units · Effective ${formatPercent(state.financials.effectiveOccupancyRate)}`
 </script>
 
 <section class="rounded-2xl border border-slate-800/80 bg-slate-900/70 px-4 py-3 shadow-sm">
@@ -54,6 +57,13 @@
         </p>
       </div>
       <div class="metric">
+        <p class="metric-label">Monthly cash flow</p>
+        <p class={`metric-value ${monthlyNetClass}`}>
+          {formatCurrency(state.financials.netMonthly)} / mo
+        </p>
+        <p class="metric-hint">{monthlyCashHint}</p>
+      </div>
+      <div class="metric">
         <p class="metric-label">Portfolio value</p>
         <p class="metric-value">{formatCompactCurrency(state.financials.valuation)}</p>
         {#if debtRatio !== null}
@@ -73,7 +83,7 @@
         >
           {formatPercent(state.facility.occupancyRate)}
         </p>
-        <p class="metric-hint">Vacant {formatNumber(availableUnits)} units</p>
+        <p class="metric-hint">{occupancyHint}</p>
       </div>
       <div class="metric">
         <p class="metric-label">Market demand</p>
