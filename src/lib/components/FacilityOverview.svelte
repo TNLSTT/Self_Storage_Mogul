@@ -11,6 +11,8 @@
   }
 
   const formatSignedPercent = (value: number) => (value > 0 ? `+${formatPercent(value)}` : formatPercent(value))
+  const formatSpeed = (value: number) =>
+    Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)
 
   $: totalUnits = Math.max(1, state.facility.totalUnits)
   $: mixEntries = Object.entries(state.facility.mix).map(([key, value]) => ({
@@ -23,7 +25,7 @@
   $: marketingMomentum = Math.min(Math.max(state.marketing.momentum, 0), 2)
   $: brandStrength = Math.min(Math.max(state.marketing.brandStrength, 0), 1)
   $: automationReliability = Math.min(Math.max(state.automation.reliability, 0), 1)
-  $: speedDisplay = `×${state.clock.speed.toFixed(1)}`
+  $: speedDisplay = `×${formatSpeed(state.clock.speed)}`
 </script>
 
 <section class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6 shadow-lg shadow-slate-900/40">

@@ -10,6 +10,11 @@
   import type { GameActionId, GameState } from './lib/types/game'
 
   let state: GameState
+  const speedOptions = [
+    { label: '1×', value: 1 },
+    { label: '2×', value: 2 },
+    { label: '4×', value: 4 },
+  ]
   const unsubscribe = game.subscribe((value) => {
     state = value
   })
@@ -24,6 +29,10 @@
 
   const handleStep = () => {
     game.step()
+  }
+
+  const handleSpeedChange = (value: number) => {
+    game.setSpeed(value)
   }
 
   const handleReset = () => {
@@ -57,6 +66,25 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-2 rounded-full border border-slate-800/80 bg-slate-900/70 px-2 py-1">
+          <span class="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-500">Time Flow</span>
+          <div class="flex overflow-hidden rounded-full border border-slate-800/70">
+            {#each speedOptions as option}
+              <button
+                type="button"
+                class={`px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${
+                  state?.clock.speed === option.value
+                    ? 'bg-sky-500/30 text-sky-100'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                aria-pressed={state?.clock.speed === option.value}
+                on:click={() => handleSpeedChange(option.value)}
+              >
+                {option.label}
+              </button>
+            {/each}
+          </div>
+        </div>
         <button
           class="rounded-full border border-sky-500/60 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-sky-200 transition hover:bg-sky-500/20"
           on:click={handleToggle}

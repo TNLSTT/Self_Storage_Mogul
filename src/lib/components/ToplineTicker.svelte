@@ -1,8 +1,12 @@
 <script lang="ts">
   import type { GameState } from '../types/game'
+  import { formatClock } from '../simulation/tick'
   import { formatCompactCurrency, formatCurrency, formatNumber, formatPercent } from '../utils/format'
 
   export let state: GameState
+
+  const formatSpeed = (value: number) =>
+    Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)
 
   $: goalProgressRatio = state.goals.target > 0 ? Math.min(state.goals.progress / state.goals.target, 1) : 0
   $: goalProgressValue = Math.round(goalProgressRatio * 100)
@@ -30,6 +34,11 @@
 <section class="rounded-2xl border border-slate-800/80 bg-slate-900/70 px-4 py-3 shadow-sm">
   <div class="overflow-x-auto">
     <div class="flex min-w-max flex-nowrap gap-3">
+      <div class="metric metric--highlight">
+        <p class="metric-label">Current Date</p>
+        <p class="metric-value">{formatClock(state)}</p>
+        <p class="metric-hint">Speed ×{formatSpeed(state.clock.speed)}</p>
+      </div>
       <div class="metric">
         <p class="metric-label">Cash on hand</p>
         <p class="metric-value">{formatCurrency(state.financials.cash)}</p>
@@ -102,6 +111,22 @@
 <style lang="postcss">
   .metric {
     @apply min-w-[160px] rounded-xl border border-slate-800/80 bg-slate-950/80 px-4 py-3;
+  }
+
+  .metric--highlight {
+    @apply border-sky-500/40 bg-sky-500/5;
+  }
+
+  .metric--highlight .metric-label {
+    @apply text-sky-300;
+  }
+
+  .metric--highlight .metric-value {
+    @apply text-sky-100;
+  }
+
+  .metric--highlight .metric-hint {
+    @apply text-sky-200/80;
   }
 
   .metric-label {
