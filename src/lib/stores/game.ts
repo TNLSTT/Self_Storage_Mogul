@@ -4,6 +4,7 @@ import { ACTION_LOOKUP } from '../data/actions'
 import { createDefaultDelinquency, createDefaultPricing } from '../data/defaults'
 import { applyActionEffects } from '../simulation/actions'
 import { advanceTick, goalForStage, TICK_INTERVAL_MS } from '../simulation/tick'
+import { computeCashFlowSnapshot } from '../simulation/finance'
 import { pushLog } from '../simulation/helpers'
 import { clearSavedGame, loadGame, saveGame } from '../utils/persistence'
 import {
@@ -76,6 +77,12 @@ const createInitialState = (): GameState => {
       revenueLastTick: 0,
       expensesLastTick: 0,
       netLastTick: 0,
+      revenueMonthly: 0,
+      expensesMonthly: 0,
+      netMonthly: 0,
+      averageDailyRent: 0,
+      effectiveOccupancyRate: 0,
+      delinquentShare: 0,
       valuation: 0,
       monthlyDebtService: 0,
       burnRate: 0,
@@ -102,6 +109,7 @@ const createInitialState = (): GameState => {
     history: {
       cash: [],
       net: [],
+      monthlyNet: [],
       occupancy: [],
       demand: [],
     },
@@ -113,11 +121,23 @@ const createInitialState = (): GameState => {
     base.facility.totalUnits * base.facility.averageRent * 8 + base.financials.cash - base.financials.debt
   )
   base.financials.monthlyDebtService = (base.financials.debt * base.financials.interestRate) / 12
+  const initialCashFlow = computeCashFlowSnapshot(base)
+  base.financials.revenueLastTick = initialCashFlow.dailyRevenue
+  base.financials.expensesLastTick = initialCashFlow.dailyExpenses
+  base.financials.netLastTick = initialCashFlow.operatingDailyNet
+  base.financials.revenueMonthly = initialCashFlow.dailyRevenue * 30
+  base.financials.expensesMonthly = initialCashFlow.dailyExpenses * 30
+  base.financials.netMonthly = initialCashFlow.operatingDailyNet * 30
+  base.financials.averageDailyRent = initialCashFlow.averageDailyRent
+  base.financials.effectiveOccupancyRate = initialCashFlow.effectiveOccupancyRate
+  base.financials.delinquentShare = initialCashFlow.delinquentShare
+  base.financials.burnRate = base.financials.expensesLastTick - base.financials.revenueLastTick
   base.goals.progress = goalProgressFor(goal, base)
   base.goals.completed = base.goals.progress >= base.goals.target
 
   base.history.cash = [base.financials.cash]
   base.history.net = [base.financials.netLastTick]
+  base.history.monthlyNet = [base.financials.netMonthly]
   base.history.occupancy = [base.facility.occupancyRate]
   base.history.demand = [base.market.demandIndex]
 

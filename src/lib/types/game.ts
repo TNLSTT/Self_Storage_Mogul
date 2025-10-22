@@ -11,6 +11,7 @@ export type GoalMetric = 'occupancy' | 'automation' | 'valuation'
 export interface HistoryState {
   cash: number[]
   net: number[]
+  monthlyNet: number[]
   occupancy: number[]
   demand: number[]
 }
@@ -79,6 +80,12 @@ export interface FinancialState {
   revenueLastTick: number
   expensesLastTick: number
   netLastTick: number
+  revenueMonthly: number
+  expensesMonthly: number
+  netMonthly: number
+  averageDailyRent: number
+  effectiveOccupancyRate: number
+  delinquentShare: number
   valuation: number
   monthlyDebtService: number
   burnRate: number

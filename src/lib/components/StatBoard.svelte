@@ -6,17 +6,23 @@
   export let state: GameState
 
   let netTone: 'default' | 'positive' | 'warning' = 'default'
+  let monthlyTone: 'default' | 'positive' | 'warning' = 'default'
   let demandTone: 'default' | 'positive' | 'warning' = 'default'
   let reputationTone: 'default' | 'positive' | 'warning' = 'default'
 
   $: netTone = state.financials.netLastTick >= 0 ? 'positive' : 'warning'
+  $: monthlyTone = state.financials.netMonthly >= 0 ? 'positive' : 'warning'
   $: demandTone =
     state.market.demandIndex >= 0.9 ? 'positive' : state.market.demandIndex <= 0.5 ? 'warning' : 'default'
   $: reputationTone = state.facility.reputation >= 70 ? 'positive' : state.facility.reputation <= 45 ? 'warning' : 'default'
   $: cashTrend = state.history.cash.slice(-24)
   $: netTrend = state.history.net.slice(-24)
+  $: monthlyTrend = state.history.monthlyNet.slice(-24)
   $: occupancyTrend = state.history.occupancy.slice(-24)
   $: demandTrend = state.history.demand.slice(-24)
+  $: effectiveUnits = Math.round(state.financials.effectiveOccupancyRate * state.facility.totalUnits)
+  $: delinquentUnits = Math.round(state.financials.delinquentShare * state.facility.totalUnits)
+  $: occupancyHint = `Effective ${formatPercent(state.financials.effectiveOccupancyRate)} (${formatNumber(effectiveUnits)} units) · Delinq ${formatPercent(state.financials.delinquentShare)} (${formatNumber(delinquentUnits)} units)`
 </script>
 
 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -34,12 +40,24 @@
     trend={netTrend}
   />
   <MetricCard
+    label="Monthly Cash Flow"
+    value={`${formatCurrency(state.financials.netMonthly)} / mo`}
+    hint={`Rev ${formatCurrency(state.financials.revenueMonthly)} · Exp ${formatCurrency(state.financials.expensesMonthly)}`}
+    tone={monthlyTone}
+    trend={monthlyTrend}
+  />
+  <MetricCard
     label="Occupancy"
     value={formatPercent(state.facility.occupancyRate)}
-    hint={`${formatNumber(state.facility.occupiedUnits)} of ${formatNumber(state.facility.totalUnits)} units`}
+    hint={occupancyHint}
     tone={state.facility.occupancyRate >= 0.86 ? 'positive' : state.facility.occupancyRate <= 0.6 ? 'warning' : 'default'}
     trend={occupancyTrend}
     trendRange={[0, 1]}
+  />
+  <MetricCard
+    label="Average Rent"
+    value={`${formatCurrency(state.facility.averageRent)} / mo`}
+    hint={`Daily ${formatCurrency(state.financials.averageDailyRent)} · Mix adjusted`}
   />
   <MetricCard
     label="Market Demand"
