@@ -93,6 +93,9 @@
   $: monthlyTrend = state.history.monthlyNet.slice(-24)
   $: occupancyTrend = state.history.occupancy.slice(-24)
   $: demandTrend = state.history.demand.slice(-24)
+  $: creditTrend = (state.player.creditHistory ?? []).slice(-24)
+  $: creditTone =
+    state.player.creditScore >= 750 ? 'positive' : state.player.creditScore <= 640 ? 'warning' : 'default'
   $: effectiveUnits = Math.round(cashFlowSnapshot.effectiveOccupancyRate * state.facility.totalUnits)
   $: delinquentUnits = Math.round(cashFlowSnapshot.units.delinquent)
   $: occupancyHint = `Effective ${formatPercent(cashFlowSnapshot.effectiveOccupancyRate)} (${formatUnitCount(effectiveUnits)} units) · Delinq ${formatPercent(cashFlowSnapshot.delinquentShare)} (${formatUnitCount(delinquentUnits)} units)`
@@ -1068,6 +1071,14 @@
     hint={`Debt ${formatCurrency(state.financials.debt)}`}
     trend={cashTrend}
     onClick={() => openMetricModal('liquidity')}
+  />
+  <MetricCard
+    label="Credit Score"
+    value={`${Math.round(state.player.creditScore)}`}
+    hint={`LTV cap ${formatPercent(state.player.loanToValue)}`}
+    tone={creditTone}
+    trend={creditTrend}
+    trendRange={[300, 850]}
   />
   <MetricCard
     label="Daily Net"

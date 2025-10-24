@@ -1,4 +1,4 @@
-import type { GameActionId, GameState } from '../types/game'
+import type { GameActionId, GameState, PlayerState } from '../types/game'
 import { createDefaultDelinquency, createDefaultPricing } from '../data/defaults'
 import {
   computeFacilityAverageRent,
@@ -45,6 +45,53 @@ const computeGoalProgress = (state: GameState) => {
   }
 }
 
+const clampValue = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+
+const sanitizeNumber = (value: unknown, fallback: number) =>
+  typeof value === 'number' && Number.isFinite(value) ? (value as number) : fallback
+
+const sanitizeRegions = (incoming: unknown, fallback: string[]): string[] => {
+  if (!Array.isArray(incoming)) return [...fallback]
+  const cleaned = incoming.filter((value): value is string => typeof value === 'string' && value.length > 0)
+  if (!cleaned.length) return [...fallback]
+  return Array.from(new Set(cleaned))
+}
+
+const sanitizePlayer = (incoming: Partial<PlayerState> | undefined, state: GameState): PlayerState => {
+  const facilityValue = state.facility.totalUnits * state.facility.averageRent * 8
+  const netWorth = state.financials.cash + facilityValue - state.financials.debt
+  const fallbackScore = state.player?.creditScore ?? 620
+  const rawScore = sanitizeNumber(incoming?.creditScore, fallbackScore)
+  const creditScore = clampValue(rawScore, 300, 850)
+  const selectedRegion =
+    typeof incoming?.selectedRegionId === 'string'
+      ? incoming.selectedRegionId
+      : state.player?.selectedRegionId ?? null
+  const regions = sanitizeRegions(incoming?.regionsUnlocked, selectedRegion ? [selectedRegion] : state.player?.regionsUnlocked ?? [])
+  const creditHistory = Array.isArray(incoming?.creditHistory)
+    ? incoming.creditHistory
+        .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+        .slice(-HISTORY_LIMIT)
+    : [creditScore]
+
+  return {
+    cash: sanitizeNumber(incoming?.cash, state.financials.cash),
+    creditScore,
+    loanToValue: clampValue(sanitizeNumber(incoming?.loanToValue, state.player?.loanToValue ?? 0.9), 0.4, 0.95),
+    maxPurchase: sanitizeNumber(incoming?.maxPurchase, state.player?.maxPurchase ?? 1_000_000),
+    buildUnlocked: Boolean(incoming?.buildUnlocked ?? state.player?.buildUnlocked ?? false),
+    monthToDateNet: sanitizeNumber(incoming?.monthToDateNet, 0),
+    negativeNetMonthStreak: Math.max(0, Math.floor(sanitizeNumber(incoming?.negativeNetMonthStreak, 0))),
+    lastMonthNetWorth: sanitizeNumber(incoming?.lastMonthNetWorth, netWorth),
+    creditHistory: creditHistory.length ? creditHistory : [creditScore],
+    regionsUnlocked: regions,
+    selectedRegionId: selectedRegion,
+    startYear: Math.floor(sanitizeNumber(incoming?.startYear, state.player?.startYear ?? state.clock.year)),
+    expansionUnlocked: Boolean(incoming?.expansionUnlocked ?? state.player?.expansionUnlocked ?? false),
+    propertyPaidOff: Boolean(incoming?.propertyPaidOff ?? state.financials.debt <= 0),
+  }
+}
+
 const finalizeState = (merged: GameState): GameState => {
   const state: GameState = {
     ...merged,
@@ -68,6 +115,18 @@ const finalizeState = (merged: GameState): GameState => {
       demand: [...merged.history.demand],
     },
   }
+
+  state.session = merged.session
+    ? {
+        started: Boolean((merged.session as { started?: boolean }).started ?? true),
+        origin:
+          (merged.session as { origin?: string }).origin === 'start_flow'
+            ? 'start_flow'
+            : (merged.session as { origin?: string }).origin === 'default'
+              ? 'default'
+              : 'save',
+      }
+    : { started: true, origin: 'save' }
 
   const pricingDefaults = createDefaultPricing()
   const delinquencyDefaults = createDefaultDelinquency()
@@ -106,6 +165,9 @@ const finalizeState = (merged: GameState): GameState => {
     0,
     state.facility.totalUnits * state.facility.averageRent * 8 + state.financials.cash - state.financials.debt
   )
+
+  state.player = sanitizePlayer((merged as Partial<GameState>).player, state)
+  state.player.cash = state.financials.cash
 
   state.history.cash = clampHistory(state.history.cash, [state.financials.cash])
   state.history.net = clampHistory(state.history.net, [state.financials.netLastTick])

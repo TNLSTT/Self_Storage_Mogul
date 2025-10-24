@@ -16,6 +16,28 @@ export interface HistoryState {
   demand: number[]
 }
 
+export interface PlayerState {
+  cash: number
+  creditScore: number
+  loanToValue: number
+  maxPurchase: number
+  buildUnlocked: boolean
+  monthToDateNet: number
+  negativeNetMonthStreak: number
+  lastMonthNetWorth: number
+  creditHistory: number[]
+  regionsUnlocked: string[]
+  selectedRegionId: string | null
+  startYear: number
+  expansionUnlocked: boolean
+  propertyPaidOff: boolean
+}
+
+export interface SessionState {
+  started: boolean
+  origin: 'default' | 'start_flow' | 'save'
+}
+
 export interface ClockState {
   day: number
   month: number
@@ -159,6 +181,7 @@ export interface ActionDefinition {
 }
 
 export interface GameState {
+  session: SessionState
   tick: number
   clock: ClockState
   city: string
@@ -167,6 +190,7 @@ export interface GameState {
   marketing: MarketingState
   market: MarketIntel
   automation: AutomationState
+  player: PlayerState
   goals: GoalState
   goalStage: number
   events: GameLogEntry[]

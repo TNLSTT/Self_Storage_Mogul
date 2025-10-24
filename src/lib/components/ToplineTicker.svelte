@@ -64,6 +64,15 @@
         <p class="metric-hint">{monthlyCashHint}</p>
       </div>
       <div class="metric">
+        <p class="metric-label">Credit score</p>
+        <p class={`metric-value ${state.player.creditScore >= 750 ? 'text-emerald-300' : ''}`}>
+          {Math.round(state.player.creditScore)}
+        </p>
+        <p class="metric-hint">
+          LTV {formatPercent(state.player.loanToValue)} · {state.player.buildUnlocked ? 'Build unlocked' : 'Build locks at 750'}
+        </p>
+      </div>
+      <div class="metric">
         <p class="metric-label">Portfolio value</p>
         <p class="metric-value">{formatCompactCurrency(state.financials.valuation)}</p>
         {#if debtRatio !== null}
