@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { GameState } from '../types/game'
   import { formatCompactCurrency, formatCurrency, formatNumber, formatPercent } from '../utils/format'
+  import { computeCashFlowSnapshot } from '../simulation/finance'
   import MetricCard from './MetricCard.svelte'
 
   export let state: GameState
@@ -10,12 +11,28 @@
   let demandTone: 'default' | 'positive' | 'warning' = 'default'
   let reputationTone: 'default' | 'positive' | 'warning' = 'default'
   let showDailyNetModal = false
+  let cashFlowSnapshot = computeCashFlowSnapshot(state)
+
+  const formatSignedCurrency = (value: number) => {
+    if (value > 0) {
+      return `+${formatCurrency(value)}`
+    }
+
+    if (value < 0) {
+      return `-${formatCurrency(Math.abs(value))}`
+    }
+
+    return formatCurrency(0)
+  }
 
   $: netTone = state.financials.netLastTick >= 0 ? 'positive' : 'warning'
   $: monthlyTone = state.financials.netMonthly >= 0 ? 'positive' : 'warning'
   $: demandTone =
     state.market.demandIndex >= 0.9 ? 'positive' : state.market.demandIndex <= 0.5 ? 'warning' : 'default'
   $: reputationTone = state.facility.reputation >= 70 ? 'positive' : state.facility.reputation <= 45 ? 'warning' : 'default'
+  $: cashFlowSnapshot = computeCashFlowSnapshot(state)
+  $: revenueBreakdown = cashFlowSnapshot.breakdown.revenue
+  $: expenseBreakdown = cashFlowSnapshot.breakdown.expenses
   $: cashTrend = state.history.cash.slice(-24)
   $: netTrend = state.history.net.slice(-24)
   $: monthlyTrend = state.history.monthlyNet.slice(-24)
@@ -126,24 +143,67 @@
         </button>
       </div>
 
-      <dl class="mt-6 space-y-4">
-        <div class="flex items-baseline justify-between gap-4">
-          <dt class="text-sm font-medium text-slate-300">Revenue collected</dt>
-          <dd class="font-display text-lg text-emerald-300">{formatCurrency(state.financials.revenueLastTick)}</dd>
-        </div>
-        <div class="flex items-baseline justify-between gap-4">
-          <dt class="text-sm font-medium text-slate-300">Operating expenses</dt>
-          <dd class="font-display text-lg text-amber-300">{formatCurrency(state.financials.expensesLastTick)}</dd>
-        </div>
-        <div class="flex items-baseline justify-between gap-4 border-t border-slate-800/70 pt-4">
-          <dt class="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Daily net</dt>
-          <dd class="font-display text-xl text-slate-100">{formatCurrency(state.financials.netLastTick)}</dd>
-        </div>
-      </dl>
+      <div class="mt-6 grid gap-6 md:grid-cols-2">
+        <section class="rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4">
+          <h3 class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200">Revenue detail</h3>
+          <dl class="mt-4 space-y-3">
+            <div class="flex items-baseline justify-between gap-4">
+              <dt class="text-sm font-medium text-slate-300">Paying tenants</dt>
+              <dd class="font-display text-base text-emerald-300">{formatSignedCurrency(revenueBreakdown.payingTenants)}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4">
+              <dt class="text-sm font-medium text-slate-300">Payment plans collected</dt>
+              <dd class="font-display text-base text-emerald-200">{formatSignedCurrency(revenueBreakdown.delinquentCollections)}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4">
+              <dt class="text-sm font-medium text-slate-300">Manager bonus lift</dt>
+              <dd class="font-display text-base text-emerald-200">{formatSignedCurrency(revenueBreakdown.managerLift)}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4">
+              <dt class="text-sm font-medium text-slate-300">Specials discount drag</dt>
+              <dd class="font-display text-base text-amber-300">{formatSignedCurrency(revenueBreakdown.specialsDiscountImpact)}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4 border-t border-slate-800/60 pt-3">
+              <dt class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Total collected</dt>
+              <dd class="font-display text-lg text-slate-100">{formatCurrency(cashFlowSnapshot.dailyRevenue)}</dd>
+            </div>
+          </dl>
+        </section>
 
-      <p class="mt-6 rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4 text-sm text-slate-400">
-        <span class="font-semibold text-slate-200">Formula:</span>
-        <span class="ml-2 text-slate-300">{formatCurrency(state.financials.revenueLastTick)} - {formatCurrency(state.financials.expensesLastTick)} = {formatCurrency(state.financials.netLastTick)}</span>
+        <section class="rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4">
+          <h3 class="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">Expense detail</h3>
+          <dl class="mt-4 space-y-3">
+            <div class="flex items-baseline justify-between gap-4">
+              <dt class="text-sm font-medium text-slate-300">Operations & staffing</dt>
+              <dd class="font-display text-base text-amber-300">{formatSignedCurrency(-expenseBreakdown.operations)}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4">
+              <dt class="text-sm font-medium text-slate-300">Marketing momentum</dt>
+              <dd class="font-display text-base text-amber-300">{formatSignedCurrency(-expenseBreakdown.marketing)}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4">
+              <dt class="text-sm font-medium text-slate-300">Automation upkeep</dt>
+              <dd class="font-display text-base text-amber-300">{formatSignedCurrency(-expenseBreakdown.automation)}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4">
+              <dt class="text-sm font-medium text-slate-300">Interest on debt</dt>
+              <dd class="font-display text-base text-amber-300">{formatSignedCurrency(-expenseBreakdown.interest)}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4">
+              <dt class="text-sm font-medium text-slate-300">Climate insurance</dt>
+              <dd class="font-display text-base text-amber-300">{formatSignedCurrency(-expenseBreakdown.insurance)}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4 border-t border-slate-800/60 pt-3">
+              <dt class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Total expenses</dt>
+              <dd class="font-display text-lg text-slate-100">{formatCurrency(cashFlowSnapshot.dailyExpenses)}</dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+
+      <p class="mt-6 rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4 text-sm text-slate-300">
+        <span class="font-semibold text-slate-100">Net today:</span>
+        <span class="ml-2 text-slate-200">{formatCurrency(cashFlowSnapshot.dailyRevenue)} - {formatCurrency(cashFlowSnapshot.dailyExpenses)} = {formatCurrency(cashFlowSnapshot.operatingDailyNet)}</span>
       </p>
     </div>
   </div>
