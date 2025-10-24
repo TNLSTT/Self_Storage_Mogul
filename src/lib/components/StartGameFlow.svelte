@@ -15,9 +15,10 @@
   })
 
   const tradeAreas: TradeAreaDefinition[] = startStore.tradeAreas()
+  let facilities: StartFacilityDefinition[] = []
 
   $: selectedRegion = state.selectedRegionId
-  $: facilities: StartFacilityDefinition[] = selectedRegion
+  $: facilities = selectedRegion
     ? startStore.facilitiesForRegion(selectedRegion)
     : []
   $: loanPreview = startStore.computePreview(state)
