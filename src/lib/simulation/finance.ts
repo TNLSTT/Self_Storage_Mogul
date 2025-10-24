@@ -13,6 +13,15 @@ export interface CashFlowSnapshot {
   averageDailyRent: number
   effectiveOccupancyRate: number
   delinquentShare: number
+  units: {
+    paying: number
+    delinquent: number
+  }
+  modifiers: {
+    collectionRate: number
+    managerBonus: number
+    specialsDiscount: number
+  }
   breakdown: {
     revenue: {
       payingTenants: number
@@ -101,6 +110,15 @@ export const computeCashFlowSnapshot = (
     averageDailyRent: dailyRent,
     effectiveOccupancyRate,
     delinquentShare,
+    units: {
+      paying: payingUnits,
+      delinquent: remainingDelinquentUnits,
+    },
+    modifiers: {
+      collectionRate,
+      managerBonus: managerRevenueBonus,
+      specialsDiscount,
+    },
     breakdown: {
       revenue: {
         payingTenants: payingTenantRent,
