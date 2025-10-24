@@ -1,6 +1,6 @@
 # Simulation Overview
 
-The Harbor One prototype advances the game state once per in-game day. Each tick runs inside the `requestAnimationFrame`
+The Self Storage Mogul prototype advances the game state once per in-game day. Each tick runs inside the `requestAnimationFrame`
 loop exposed by `src/lib/stores/game.ts` and is implemented in `src/lib/simulation/tick.ts`.
 
 ## Tick Flow

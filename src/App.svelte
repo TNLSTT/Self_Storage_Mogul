@@ -67,7 +67,7 @@
           <div class="space-y-2">
             <p class="text-[11px] font-semibold uppercase tracking-[0.38em] text-sky-300">Self Storage Mogul</p>
             <h1 class="font-display text-3xl leading-tight text-slate-100 md:text-[2.75rem]">
-              Harbor One Command Console
+              The Self Storage Mogul Command Console
             </h1>
             <p class="max-w-2xl text-sm text-slate-300">
               Keep the cash compounding, automate the grind, and surface new angles before competitors smell the arbitrage.
