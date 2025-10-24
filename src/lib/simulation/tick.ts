@@ -100,6 +100,8 @@ export const formatClock = (state: GameState) => {
 }
 
 export const advanceTick = (state: Draft<GameState>) => {
+  const previousNetWorth = state.player.lastMonthNetWorth ?? 0
+  let monthAdvanced = false
   tickCooldowns(state)
   state.tick += 1
   state.clock.day += DAYS_PER_TICK
@@ -107,10 +109,16 @@ export const advanceTick = (state: Draft<GameState>) => {
   while (state.clock.day > MONTH_LENGTH) {
     state.clock.day -= MONTH_LENGTH
     state.clock.month += 1
+    monthAdvanced = true
     if (state.clock.month > MONTHS_PER_YEAR) {
       state.clock.month = 1
       state.clock.year += 1
+      // year advanced
     }
+  }
+
+  if (!Number.isFinite(state.player.monthToDateNet)) {
+    state.player.monthToDateNet = 0
   }
 
   state.marketing.momentum = Math.max(0, state.marketing.momentum - 0.02)
@@ -267,6 +275,8 @@ export const advanceTick = (state: Draft<GameState>) => {
     net -= principalPayment
   }
 
+  state.player.monthToDateNet += net
+
   state.financials.revenueLastTick = cashFlow.dailyRevenue
   state.financials.expensesLastTick = cashFlow.dailyExpenses
   state.financials.netLastTick = net
@@ -288,10 +298,90 @@ export const advanceTick = (state: Draft<GameState>) => {
   )
   state.financials.burnRate = cashFlow.dailyExpenses - cashFlow.dailyRevenue
   state.financials.monthlyDebtService = (state.financials.debt * state.financials.interestRate) / 12
-  state.financials.valuation = Math.max(
-    0,
-    state.facility.totalUnits * state.facility.averageRent * 8 + state.financials.cash - state.financials.debt
-  )
+  const facilityValue = state.facility.totalUnits * state.facility.averageRent * 8
+  state.financials.valuation = Math.max(0, facilityValue + state.financials.cash - state.financials.debt)
+
+  let creditScore = state.player.creditScore
+  const netWorth = state.financials.cash + facilityValue - state.financials.debt
+  state.player.cash = state.financials.cash
+
+  if (!state.player.propertyPaidOff && state.financials.debt <= 0.01) {
+    state.player.propertyPaidOff = true
+    creditScore += 10
+    pushLog(state, 'Debt retired—credit bureaus reward your spotless payment record.', 'positive')
+  }
+
+  if (netWorth < 0 && previousNetWorth >= 0) {
+    creditScore -= 20
+    pushLog(state, 'Net worth slipped negative—credit agencies slash your rating.', 'warning')
+  }
+
+  if (state.financials.cash < 0) {
+    state.financials.cash = 0
+    state.player.cash = 0
+    state.paused = true
+    pushLog(state, 'Cash exhausted. Receivership halts further actions.', 'warning')
+    return
+  }
+
+  if (monthAdvanced) {
+    const netWorthChange = netWorth - previousNetWorth
+    const percentChange =
+      previousNetWorth > 0
+        ? (netWorthChange / previousNetWorth) * 100
+        : netWorth !== 0
+          ? Math.sign(netWorth) * 5
+          : 0
+
+    if (percentChange > 0) {
+      creditScore += percentChange * 0.25
+    } else if (percentChange < 0) {
+      creditScore += percentChange * 0.5
+    }
+
+    if (state.player.monthToDateNet < 0) {
+      state.player.negativeNetMonthStreak += 1
+    } else {
+      state.player.negativeNetMonthStreak = 0
+    }
+
+    if (state.player.negativeNetMonthStreak >= 3) {
+      creditScore -= 5
+      state.player.negativeNetMonthStreak = 0
+      pushLog(state, 'Credit warning: three consecutive months of negative net income.', 'warning')
+    }
+
+    const headroom = 850 - creditScore
+    if (headroom > 0) {
+      creditScore += headroom * 0.01
+    }
+
+    state.player.lastMonthNetWorth = netWorth
+    state.player.monthToDateNet = 0
+  }
+
+  creditScore = clamp(creditScore, 300, 850)
+  state.player.creditScore = creditScore
+
+  if (monthAdvanced) {
+    state.player.creditHistory.push(creditScore)
+    if (state.player.creditHistory.length > HISTORY_CAP) {
+      state.player.creditHistory.shift()
+    }
+  }
+
+  if (!state.player.buildUnlocked && creditScore >= 750) {
+    state.player.buildUnlocked = true
+    pushLog(state, 'Credit milestone achieved—development projects unlocked.', 'positive')
+  }
+
+  if (!state.player.expansionUnlocked && state.clock.year - state.player.startYear >= 5) {
+    state.player.expansionUnlocked = true
+    state.player.regionsUnlocked = Array.from(
+      new Set([...state.player.regionsUnlocked, 'georgia', 'texas'])
+    )
+    pushLog(state, 'Five-year review opens Georgia and Texas acquisition pipelines.', 'positive')
+  }
 
   pushHistoryPoint(state.history.cash, state.financials.cash)
   pushHistoryPoint(state.history.net, state.financials.netLastTick)
