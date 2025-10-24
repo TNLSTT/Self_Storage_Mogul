@@ -29,7 +29,7 @@ The entire simulation runs client-side in the browser—no backend dependencies,
 
 ## 🚦 Prototype Snapshot
 
-The current build focuses on the **Harbor One command console**, a single-facility slice that exercises the core systems:
+The current build focuses on the **Self Storage Mogul command console**, a single-facility slice that exercises the core systems:
 
 - **Live market loop** powered by Svelte stores, Immer, and a deterministic RNG. Every "day" the simulation adjusts demand,
   occupancy, pricing pressure, and climate risk before updating your financials.

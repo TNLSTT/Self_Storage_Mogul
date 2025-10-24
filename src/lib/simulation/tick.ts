@@ -50,7 +50,7 @@ export const goalForStage = (stage: number): GoalState => {
     case 0:
       return {
         id: 'stabilize',
-        label: 'Stabilize Harbor One',
+        label: 'Stabilize the Mogul Flagship',
         description: 'Hold occupancy above 85% to prove the market.',
         metric: 'occupancy',
         target: 0.85,
