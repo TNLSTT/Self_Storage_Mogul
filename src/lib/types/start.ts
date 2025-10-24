@@ -8,6 +8,7 @@ export interface TradeAreaDefinition {
   operatingCostFactor: number
   baseRate: number
   climateRisk: number
+  avgCapRate: number
   description: string
 }
 
@@ -24,6 +25,7 @@ export interface StartFacilityDefinition {
   issues: string[]
   expansionPotential: number
   totalUnits: number
+  debtService: number
   mix: {
     climateControlled: number
     driveUp: number
@@ -54,11 +56,44 @@ export interface StartPlayerProfile {
   maxPurchase: number
 }
 
+export interface StartFinancialSnapshot {
+  month: number
+  cash: number
+  creditScore: number
+  loanBalance: number
+  revenue: number
+  expenses: number
+  debtService: number
+  netIncome: number
+  netWorth: number
+  creditDelta: number
+  events: string[]
+}
+
 export interface StartGameResult {
   region: TradeAreaDefinition
   facility: StartFacilityDefinition
   financing: FinancingSelection
   loan: LoanProfile
   player: StartPlayerProfile & { cashAfterPurchase: number }
+  projection: StartFinancialProjection
   seed: number
+}
+
+export interface StartFinancialProjection {
+  revenueMonthly: number
+  expensesMonthly: number
+  debtServiceMonthly: number
+  netIncomeMonthly: number
+  cashAfterPurchase: number
+  netWorthAfterPurchase: number
+  netWorthChangePercent: number
+  creditDeltaEstimate: number
+  runwayMonths: number
+  totalCreditDelta: number
+  finalCreditScore: number
+  payoffMonth: number | null
+  forcedSaleMonth: number | null
+  defaulted: boolean
+  timeline: StartFinancialSnapshot[]
 }

@@ -18,6 +18,7 @@ import {
   type PricingTier,
 } from '../types/game'
 import type { StartGameResult } from '../types/start'
+import { computeStartProjection } from '../simulation/startProjection'
 import { computeInterestRate, loanSeedFrom, pmt } from '../utils/loan'
 import {
   computeFacilityAverageRent,
@@ -62,23 +63,32 @@ const createDefaultStartConfig = (): StartGameResult => {
   const interestRate = computeInterestRate(region.baseRate, BASE_PLAYER.creditScore)
   const termMonths = defaultFinancing.termYears * 12
   const monthlyPayment = pmt(interestRate, termMonths, loanAmount)
+  const loanProfile = {
+    baseRate: region.baseRate,
+    downPayment,
+    interestRate,
+    loanAmount,
+    monthlyPayment,
+    rateType: defaultFinancing.rateType,
+    termMonths,
+  }
+  const projection = computeStartProjection({
+    facility,
+    financing: { ...defaultFinancing },
+    loan: loanProfile,
+    player: BASE_PLAYER,
+    region,
+  })
   return {
     region,
     facility,
     financing: { ...defaultFinancing },
-    loan: {
-      baseRate: region.baseRate,
-      downPayment,
-      interestRate,
-      loanAmount,
-      monthlyPayment,
-      rateType: defaultFinancing.rateType,
-      termMonths,
-    },
+    loan: loanProfile,
     player: {
       ...BASE_PLAYER,
       cashAfterPurchase: BASE_PLAYER.cash - downPayment,
     },
+    projection,
     seed: loanSeedFrom([
       region.id,
       facility.id,
