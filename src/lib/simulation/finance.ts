@@ -13,6 +13,23 @@ export interface CashFlowSnapshot {
   averageDailyRent: number
   effectiveOccupancyRate: number
   delinquentShare: number
+  breakdown: {
+    revenue: {
+      payingTenants: number
+      delinquentCollections: number
+      managerLift: number
+      specialsDiscountImpact: number
+      total: number
+    }
+    expenses: {
+      operations: number
+      marketing: number
+      automation: number
+      interest: number
+      insurance: number
+      total: number
+    }
+  }
 }
 
 export interface CashFlowOverrides {
@@ -58,7 +75,13 @@ export const computeCashFlowSnapshot = (
   const dailyRent = overrides.dailyRent ?? state.facility.averageRent / 30
   const effectiveRevenueUnits = (payingUnits + remainingDelinquentUnits * collectionRate) * (1 + managerRevenueBonus)
 
-  const revenue = effectiveRevenueUnits * dailyRent * (1 - specialsDiscount)
+  const payingTenantRent = payingUnits * dailyRent
+  const delinquentCollections = remainingDelinquentUnits * collectionRate * dailyRent
+  const baseRevenueBeforeBonus = payingTenantRent + delinquentCollections
+  const managerLift = baseRevenueBeforeBonus * managerRevenueBonus
+  const grossRevenueBeforeDiscount = baseRevenueBeforeBonus + managerLift
+  const specialsDiscountImpact = -grossRevenueBeforeDiscount * specialsDiscount
+  const revenue = grossRevenueBeforeDiscount + specialsDiscountImpact
   const operations = (420 + state.facility.totalUnits * 2.6) * (1 - state.automation.level * 0.18)
   const marketingSpend = 240 * state.marketing.level + state.marketing.momentum * 160
   const automationSpend = 160 * (1 + state.automation.level * 2)
@@ -78,5 +101,22 @@ export const computeCashFlowSnapshot = (
     averageDailyRent: dailyRent,
     effectiveOccupancyRate,
     delinquentShare,
+    breakdown: {
+      revenue: {
+        payingTenants: payingTenantRent,
+        delinquentCollections,
+        managerLift,
+        specialsDiscountImpact,
+        total: revenue,
+      },
+      expenses: {
+        operations,
+        marketing: marketingSpend,
+        automation: automationSpend,
+        interest,
+        insurance,
+        total: expenses,
+      },
+    },
   }
 }
