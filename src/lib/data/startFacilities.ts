@@ -9,6 +9,7 @@ export const TRADE_AREAS: TradeAreaDefinition[] = [
     operatingCostFactor: 0.84,
     baseRate: 0.067,
     climateRisk: 0.28,
+    avgCapRate: 0.072,
     description: 'Underserved rural and suburban corridors with pent-up demand.',
   },
   {
@@ -19,6 +20,7 @@ export const TRADE_AREAS: TradeAreaDefinition[] = [
     operatingCostFactor: 0.96,
     baseRate: 0.071,
     climateRisk: 0.36,
+    avgCapRate: 0.065,
     description: 'Heated metro competition with aggressive rate wars.',
   },
   {
@@ -29,6 +31,7 @@ export const TRADE_AREAS: TradeAreaDefinition[] = [
     operatingCostFactor: 1.05,
     baseRate: 0.073,
     climateRisk: 0.48,
+    avgCapRate: 0.062,
     description: 'Dense coastal market with strong seasonality swings.',
   },
 ]
@@ -47,6 +50,7 @@ export const START_FACILITIES: StartFacilityDefinition[] = [
     issues: ['outdated lighting', 'manual gate operations'],
     expansionPotential: 0.18,
     totalUnits: 420,
+    debtService: 5_415,
     mix: {
       climateControlled: 140,
       driveUp: 210,
@@ -66,6 +70,7 @@ export const START_FACILITIES: StartFacilityDefinition[] = [
     issues: ['underpriced units', 'dated signage'],
     expansionPotential: 0.24,
     totalUnits: 455,
+    debtService: 6_010,
     mix: {
       climateControlled: 150,
       driveUp: 235,
@@ -85,6 +90,7 @@ export const START_FACILITIES: StartFacilityDefinition[] = [
     issues: ['storm hardening required', 'manual billing workflows'],
     expansionPotential: 0.22,
     totalUnits: 390,
+    debtService: 5_019,
     mix: {
       climateControlled: 120,
       driveUp: 210,
@@ -104,6 +110,7 @@ export const START_FACILITIES: StartFacilityDefinition[] = [
     issues: ['HVAC nearing end-of-life', 'marketing underfunded'],
     expansionPotential: 0.16,
     totalUnits: 510,
+    debtService: 6_660,
     mix: {
       climateControlled: 210,
       driveUp: 220,
@@ -123,6 +130,7 @@ export const START_FACILITIES: StartFacilityDefinition[] = [
     issues: ['underpriced climate units', 'outdated lighting'],
     expansionPotential: 0.21,
     totalUnits: 540,
+    debtService: 7_068,
     mix: {
       climateControlled: 220,
       driveUp: 230,
@@ -142,6 +150,7 @@ export const START_FACILITIES: StartFacilityDefinition[] = [
     issues: ['automation gaps', 'dated signage'],
     expansionPotential: 0.19,
     totalUnits: 500,
+    debtService: 6_321,
     mix: {
       climateControlled: 190,
       driveUp: 220,
@@ -161,6 +170,7 @@ export const START_FACILITIES: StartFacilityDefinition[] = [
     issues: ['elevator modernization needed', 'premium units underpriced'],
     expansionPotential: 0.12,
     totalUnits: 495,
+    debtService: 6_893,
     mix: {
       climateControlled: 240,
       driveUp: 170,
@@ -180,6 +190,7 @@ export const START_FACILITIES: StartFacilityDefinition[] = [
     issues: ['manual gate operations', 'automation gaps'],
     expansionPotential: 0.2,
     totalUnits: 480,
+    debtService: 6_687,
     mix: {
       climateControlled: 210,
       driveUp: 190,
@@ -199,6 +210,7 @@ export const START_FACILITIES: StartFacilityDefinition[] = [
     issues: ['storm hardening required', 'dated signage'],
     expansionPotential: 0.18,
     totalUnits: 470,
+    debtService: 6_583,
     mix: {
       climateControlled: 200,
       driveUp: 185,

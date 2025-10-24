@@ -1,6 +1,13 @@
 import { get, writable } from 'svelte/store'
 import { START_FACILITIES, TRADE_AREAS, findFacility, findTradeArea } from '../data/startFacilities'
-import type { FinancingSelection, LoanProfile, StartGameResult, StartPlayerProfile } from '../types/start'
+import { computeStartProjection } from '../simulation/startProjection'
+import type {
+  FinancingSelection,
+  LoanProfile,
+  StartFinancialProjection,
+  StartGameResult,
+  StartPlayerProfile,
+} from '../types/start'
 import { computeInterestRate, loanSeedFrom, pmt } from '../utils/loan'
 
 interface FacilityStartState {
@@ -16,6 +23,8 @@ interface LoanPreview extends LoanProfile {
   maxLoanAllowed: number
   valid: boolean
 }
+
+const clampDownPayment = (value: number) => Math.max(Math.min(value, 1), 0.1)
 
 const BASE_PLAYER: StartPlayerProfile = {
   cash: 100_000,
@@ -48,7 +57,7 @@ const computeLoanPreview = (state: FacilityStartState): LoanPreview | null => {
   if (!region || !facility) {
     return null
   }
-  let downPaymentPercent = Math.max(Math.min(state.financing.downPaymentPercent, 1), 0.1)
+  let downPaymentPercent = clampDownPayment(state.financing.downPaymentPercent)
   const targetDownPayment = facility.price * downPaymentPercent
   const maxLoan = facility.price * state.player.loanToValue
   let loanAmount = facility.price - targetDownPayment
@@ -75,7 +84,11 @@ const computeLoanPreview = (state: FacilityStartState): LoanPreview | null => {
   }
 }
 
-const toResult = (state: FacilityStartState, preview: LoanPreview): StartGameResult => {
+const toResult = (
+  state: FacilityStartState,
+  preview: LoanPreview,
+  projection: StartFinancialProjection
+): StartGameResult => {
   const region = findTradeArea(state.selectedRegionId!)!
   const facility = findFacility(state.selectedFacilityId!)!
   const player = {
@@ -83,21 +96,21 @@ const toResult = (state: FacilityStartState, preview: LoanPreview): StartGameRes
     cashAfterPurchase: state.player.cash - preview.downPayment,
   }
   const rateType = state.financing.rateType
-  const rate = rateType === 'variable' ? preview.interestRate : preview.interestRate
   return {
     region,
     facility,
-    financing: { ...state.financing, downPaymentPercent: Math.max(state.financing.downPaymentPercent, 0.1) },
+    financing: { ...state.financing, downPaymentPercent: clampDownPayment(state.financing.downPaymentPercent) },
     loan: {
       baseRate: preview.baseRate,
       downPayment: preview.downPayment,
-      interestRate: rate,
+      interestRate: preview.interestRate,
       loanAmount: preview.loanAmount,
       monthlyPayment: preview.monthlyPayment,
       rateType,
       termMonths: preview.termMonths,
     },
     player,
+    projection,
     seed: loanSeedFrom([
       region.id,
       facility.id,
@@ -150,10 +163,16 @@ const facilityStartStore = () => {
     updateFinancing: (changes: Partial<FinancingSelection>) => {
       update((current) => ({
         ...current,
-        financing: {
-          ...current.financing,
-          ...changes,
-        },
+        financing: (() => {
+          const updated = {
+            ...current.financing,
+            ...changes,
+          }
+          return {
+            ...updated,
+            downPaymentPercent: clampDownPayment(updated.downPaymentPercent),
+          }
+        })(),
         error: null,
       }))
     },
@@ -176,12 +195,66 @@ const facilityStartStore = () => {
         set({ ...state, error: 'Insufficient cash for the desired down payment.' })
         return null
       }
+      const region = state.selectedRegionId ? findTradeArea(state.selectedRegionId) : null
+      const facility = state.selectedFacilityId ? findFacility(state.selectedFacilityId) : null
+      if (!region || !facility) {
+        set({ ...state, error: 'Unable to load regional or facility data. Please try again.' })
+        return null
+      }
+      const projection = computeStartProjection({
+        facility,
+        financing: { ...state.financing, downPaymentPercent: clampDownPayment(state.financing.downPaymentPercent) },
+        loan: {
+          baseRate: preview.baseRate,
+          downPayment: preview.downPayment,
+          interestRate: preview.interestRate,
+          loanAmount: preview.loanAmount,
+          monthlyPayment: preview.monthlyPayment,
+          rateType: preview.rateType,
+          termMonths: preview.termMonths,
+        },
+        player: state.player,
+        region,
+      })
       set({ ...state, step: 'summary', error: null })
-      return toResult(state, preview)
+      return toResult(state, preview, projection)
     },
     reset: () => set(createInitialState()),
     raw: () => get({ subscribe }),
     computePreview: (state?: FacilityStartState) => computeLoanPreview(state ?? get({ subscribe })),
+    computeProjection: (
+      baseState?: FacilityStartState,
+      basePreview?: LoanPreview | null
+    ): StartFinancialProjection | null => {
+      const currentState = baseState ?? get({ subscribe })
+      const preview = basePreview ?? computeLoanPreview(currentState)
+      if (!preview || !currentState.selectedFacilityId) {
+        return null
+      }
+      if (!currentState.selectedRegionId) {
+        return null
+      }
+      const region = findTradeArea(currentState.selectedRegionId)
+      const facility = findFacility(currentState.selectedFacilityId)
+      if (!region || !facility) {
+        return null
+      }
+      return computeStartProjection({
+        facility,
+        financing: { ...currentState.financing, downPaymentPercent: clampDownPayment(currentState.financing.downPaymentPercent) },
+        loan: {
+          baseRate: preview.baseRate,
+          downPayment: preview.downPayment,
+          interestRate: preview.interestRate,
+          loanAmount: preview.loanAmount,
+          monthlyPayment: preview.monthlyPayment,
+          rateType: preview.rateType,
+          termMonths: preview.termMonths,
+        },
+        player: currentState.player,
+        region,
+      })
+    },
     tradeAreas: () => TRADE_AREAS,
     facilitiesForRegion: (regionId: string) => START_FACILITIES.filter((facility) => facility.regionId === regionId),
   }
