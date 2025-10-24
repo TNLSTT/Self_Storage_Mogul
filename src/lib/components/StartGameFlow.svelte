@@ -153,7 +153,7 @@
                 {/if}
               </div>
               <p class="text-xs text-slate-400">{region.description}</p>
-              <dl class="mt-3 grid grid-cols-2 gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-400 md:grid-cols-4">
+              <dl class="mt-3 grid grid-cols-2 gap-2 text-[11px] uppercase text-slate-400">
                 <div>
                   <dt>Demand</dt>
                   <dd class="text-sm text-slate-100">{formatPercent(region.demandIndex)}</dd>
