@@ -21,7 +21,8 @@ interface StartProjectionInput {
 const toPercentString = (value: number) => `${value.toFixed(2)}%`
 
 const computeRevenue = (facility: StartFacilityDefinition, region: TradeAreaDefinition) => {
-  const base = (facility.occupancy * facility.sizeSqft * facility.avgRentPerSqft) / 12
+  // avgRentPerSqft represents a monthly rate so we keep the revenue on a monthly basis
+  const base = facility.occupancy * facility.sizeSqft * facility.avgRentPerSqft
   const demandLift = 0.9 + region.demandIndex * 0.2
   const competitionDrag = 1 - region.competition * 0.05
   return base * demandLift * competitionDrag
